@@ -14,6 +14,10 @@
       --section-bg: #ffffff;
     }
 
+    * {
+      scroll-behavior: smooth;
+    }
+
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
@@ -27,6 +31,7 @@
       padding: 20px 0;
       text-align: center;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      animation: fadeInDown 1s ease-out;
     }
 
     header h1 {
@@ -35,10 +40,17 @@
       color: var(--primary-color);
     }
 
+    header p {
+      margin-top: 5px;
+      font-size: 1.1rem;
+      color: #666;
+    }
+
     .hero {
       text-align: center;
       padding: 80px 20px 60px;
       background-color: var(--section-bg);
+      animation: fadeInUp 1s ease-out;
     }
 
     .hero h2 {
@@ -77,6 +89,7 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 40px;
+      animation: fadeInUp 1.2s ease-out;
     }
 
     .feature {
@@ -118,6 +131,7 @@
       max-width: 400px;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
       text-align: left;
+      animation: zoomIn 0.5s ease;
     }
 
     .modal-content h2 {
@@ -152,12 +166,29 @@
       padding: 20px;
       font-size: 0.9rem;
       color: var(--footer-color);
+      animation: fadeInUp 1.2s ease-out;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes zoomIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
     }
   </style>
 </head>
 <body>
   <header>
     <h1>Upstrail</h1>
+    <p>Excel-based planning tools. Consulting that scales.</p>
   </header>
 
   <section class="hero">
@@ -204,8 +235,15 @@
         alert('Please enter a valid email address.');
         return;
       }
-      console.log('Captured email:', email); // placeholder
-      alert('Thanks! We will get in touch soon.');
+
+      fetch('https://script.google.com/macros/s/AKfycbzINA3ef956u7wTewP67JeVMsoXUAr_9k_nTDIFcemgkeIUvQHWl7AARuxovOmLhl4z/exec', {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `email=${encodeURIComponent(email)}`
+      });
+
+      alert('Thanks! Your email has been recorded.');
       document.getElementById('contactModal').style.display = 'none';
     }
 
