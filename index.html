@@ -15,6 +15,7 @@
     }
 
     * {
+      box-sizing: border-box;
       scroll-behavior: smooth;
     }
 
@@ -22,92 +23,84 @@
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
-      background: linear-gradient(to bottom right, #f0f4f8, #d6e4f0);
+      background: var(--background-color);
       color: var(--text-color);
+      line-height: 1.6;
     }
 
     header {
       background-color: white;
-      padding: 20px 0;
+      padding: 40px 20px 20px;
       text-align: center;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      animation: fadeInDown 1s ease-out;
     }
 
     header h1 {
       margin: 0;
-      font-size: 2.5rem;
+      font-size: 2.25rem;
       color: var(--primary-color);
     }
 
     header p {
-      margin-top: 5px;
-      font-size: 1.1rem;
+      margin-top: 10px;
+      font-size: 1rem;
       color: #666;
     }
 
     .hero {
       text-align: center;
-      padding: 80px 20px 60px;
+      padding: 60px 20px;
       background-color: var(--section-bg);
-      animation: fadeInUp 1s ease-out;
     }
 
     .hero h2 {
-      font-size: 2rem;
+      font-size: 1.75rem;
       margin-bottom: 20px;
     }
 
     .hero p {
-      font-size: 1.2rem;
+      font-size: 1rem;
       max-width: 700px;
       margin: 0 auto 30px;
     }
 
     .button {
-      padding: 14px 30px;
+      padding: 12px 24px;
       background-color: var(--accent-color);
       color: white;
       text-decoration: none;
-      border-radius: 8px;
+      border-radius: 6px;
       font-weight: bold;
       font-size: 1rem;
-      transition: all 0.3s ease;
+      border: none;
       cursor: pointer;
+      transition: background-color 0.3s ease;
     }
 
     .button:hover {
       background-color: #d58a1a;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .features {
-      background: #ffffff;
-      padding: 60px 20px;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 40px;
-      animation: fadeInUp 1.2s ease-out;
+      padding: 40px 20px;
+      gap: 20px;
     }
 
     .feature {
       background: #f9f9f9;
       border-radius: 10px;
       padding: 20px;
-      max-width: 280px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease;
-    }
-
-    .feature:hover {
-      transform: translateY(-5px);
+      flex: 1 1 280px;
+      max-width: 320px;
+      border: 1px solid #e3e6ea;
     }
 
     .feature h3 {
       color: var(--primary-color);
-      margin-bottom: 10px;
+      margin-top: 0;
     }
 
     .modal {
@@ -125,13 +118,11 @@
     .modal-content {
       background-color: #fff;
       margin: 10% auto;
-      padding: 30px;
+      padding: 20px;
       border-radius: 8px;
       width: 90%;
       max-width: 400px;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-      text-align: left;
-      animation: zoomIn 0.5s ease;
     }
 
     .modal-content h2 {
@@ -166,31 +157,33 @@
       padding: 20px;
       font-size: 0.9rem;
       color: var(--footer-color);
-      animation: fadeInUp 1.2s ease-out;
     }
 
-    @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes zoomIn {
-      from { transform: scale(0.8); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
+    @media (max-width: 600px) {
+      header h1 {
+        font-size: 1.75rem;
+      }
+      .hero h2 {
+        font-size: 1.25rem;
+      }
+      .hero p,
+      header p {
+        font-size: 0.95rem;
+      }
+      .features {
+        flex-direction: column;
+        align-items: center;
+      }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Upstrail</h1>
+    <h1 style="font-size: 2.8rem; font-weight: 700; letter-spacing: 0.5px; color: var(--primary-color); text-shadow: 1px 1px 2px rgba(0,0,0,0.1); font-family: 'Segoe UI', sans-serif;">
+      Upstrail
+    </h1>
     <p>Excel-based planning tools. Consulting that scales.</p>
-  </header>
-
+    <hr style="border: none; border-top: 1px solid #ccc; margin: 20px auto 0; width: 90%; max-width: 900px;">
   <section class="hero">
     <h2>Smarter Supply Chain Tools. Minimal Effort.</h2>
     <p>Upstrail helps businesses optimize planning using Excel-based tools and light consulting — no heavy IT systems or long timelines required.</p>
