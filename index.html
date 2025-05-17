@@ -8,62 +8,78 @@
     :root {
       --primary-color: #2e6edb;
       --accent-color: #f9a826;
-      --background-color: #f5f7fa;
-      --text-color: #333;
-      --footer-color: #888;
+      --background-color: #f0f4f8;
+      --text-color: #222;
+      --footer-color: #777;
     }
 
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, var(--background-color), #e1e9f0);
+      background: linear-gradient(to bottom right, #f0f4f8, #d6e4f0);
       color: var(--text-color);
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      height: 100vh;
+      align-items: center;
       text-align: center;
     }
+
+    .container {
+      padding: 40px;
+      max-width: 800px;
+      background: white;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+    }
+
     h1 {
-      font-size: 2.5rem;
+      font-size: 3rem;
       color: var(--primary-color);
+      margin-bottom: 20px;
     }
+
     p {
-      font-size: 1.2rem;
-      max-width: 600px;
-      margin: 20px auto;
+      font-size: 1.25rem;
       color: #444;
+      margin-bottom: 30px;
     }
+
     a.button {
       display: inline-block;
-      margin-top: 20px;
-      padding: 12px 24px;
+      padding: 14px 30px;
       background-color: var(--accent-color);
       color: white;
       text-decoration: none;
-      border-radius: 5px;
+      border-radius: 8px;
       font-weight: bold;
-      transition: background-color 0.3s;
+      font-size: 1rem;
+      transition: all 0.3s ease;
     }
+
     a.button:hover {
-      background-color: #d68a1a;
+      background-color: #d58a1a;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
+
     footer {
-      position: absolute;
-      bottom: 20px;
+      margin-top: 40px;
       font-size: 0.9rem;
       color: var(--footer-color);
     }
   </style>
 </head>
 <body>
-  <h1>Welcome to Upstrail</h1>
-  <p>We're building ultra-simple Excel-based supply chain tools that automate planning without requiring massive systems or long implementations.</p>
-  <a href="mailto:hello@yourdomain.com" class="button">Get in Touch</a>
-  <footer>
-    &copy; 2025 Upstrail. All rights reserved.
-  </footer>
+  <div class="container">
+    <h1>Welcome to Upstrail</h1>
+    <p>We build Excel-native supply chain tools that simplify planning without the overhead of complex systems or long change cycles. Instant setup. Real results.</p>
+    <a href="mailto:hello@yourdomain.com" class="button">Get in Touch</a>
+    <footer>
+      &copy; 2025 Upstrail. All rights reserved.
+    </footer>
+  </div>
 </body>
 </html>
