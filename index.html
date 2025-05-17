@@ -11,6 +11,7 @@
       --background-color: #f0f4f8;
       --text-color: #222;
       --footer-color: #777;
+      --section-bg: #ffffff;
     }
 
     body {
@@ -19,36 +20,39 @@
       padding: 0;
       background: linear-gradient(to bottom right, #f0f4f8, #d6e4f0);
       color: var(--text-color);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+    }
+
+    header {
+      background-color: white;
+      padding: 20px 0;
       text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
-    .container {
-      padding: 40px;
-      max-width: 800px;
-      background: white;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-      border-radius: 12px;
-    }
-
-    h1 {
-      font-size: 3rem;
+    header h1 {
+      margin: 0;
+      font-size: 2.5rem;
       color: var(--primary-color);
+    }
+
+    .hero {
+      text-align: center;
+      padding: 80px 20px 60px;
+      background-color: var(--section-bg);
+    }
+
+    .hero h2 {
+      font-size: 2rem;
       margin-bottom: 20px;
     }
 
-    p {
-      font-size: 1.25rem;
-      color: #444;
-      margin-bottom: 30px;
+    .hero p {
+      font-size: 1.2rem;
+      max-width: 700px;
+      margin: 0 auto 30px;
     }
 
-    a.button {
-      display: inline-block;
+    .button {
       padding: 14px 30px;
       background-color: var(--accent-color);
       color: white;
@@ -59,27 +63,70 @@
       transition: all 0.3s ease;
     }
 
-    a.button:hover {
+    .button:hover {
       background-color: #d58a1a;
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
+    .features {
+      background: #ffffff;
+      padding: 60px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 40px;
+    }
+
+    .feature {
+      background: #f9f9f9;
+      border-radius: 10px;
+      padding: 20px;
+      max-width: 280px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    .feature h3 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+    }
+
     footer {
-      margin-top: 40px;
+      text-align: center;
+      padding: 20px;
       font-size: 0.9rem;
       color: var(--footer-color);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Welcome to Upstrail</h1>
-    <p>We build Excel-native supply chain tools that simplify planning without the overhead of complex systems or long change cycles. Instant setup. Real results.</p>
-    <a href="mailto:hello@yourdomain.com" class="button">Get in Touch</a>
-    <footer>
-      &copy; 2025 Upstrail. All rights reserved.
-    </footer>
-  </div>
+  <header>
+    <h1>Upstrail</h1>
+  </header>
+
+  <section class="hero">
+    <h2>Smarter Supply Chain Tools. Minimal Effort.</h2>
+    <p>Upstrail helps businesses optimize planning using Excel-based tools and light consulting — no heavy IT systems or long timelines required.</p>
+    <a href="siddharth@upstrail.com" class="button">Talk to Us</a>
+  </section>
+
+  <section class="features">
+    <div class="feature">
+      <h3>Excel-Native Tools</h3>
+      <p>Our add-ins work directly inside Excel — no new platform training needed.</p>
+    </div>
+    <div class="feature">
+      <h3>Fast Setup</h3>
+      <p>Deploy custom solutions in days, not months — perfect for SMBs.</p>
+    </div>
+    <div class="feature">
+      <h3>Expert Support</h3>
+      <p>We bring supply chain consulting to your fingertips — light, fast, and to the point.</p>
+    </div>
+  </section>
+
+  <footer>
+    &copy; 2025 Upstrail. All rights reserved.
+  </footer>
 </body>
 </html>
