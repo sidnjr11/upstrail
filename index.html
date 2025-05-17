@@ -61,6 +61,7 @@
       font-weight: bold;
       font-size: 1rem;
       transition: all 0.3s ease;
+      cursor: pointer;
     }
 
     .button:hover {
@@ -83,12 +84,67 @@
       border-radius: 10px;
       padding: 20px;
       max-width: 280px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .feature:hover {
+      transform: translateY(-5px);
     }
 
     .feature h3 {
       color: var(--primary-color);
       margin-bottom: 10px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 30px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      text-align: left;
+    }
+
+    .modal-content h2 {
+      margin-top: 0;
+    }
+
+    .modal-content input[type="email"] {
+      width: 100%;
+      padding: 10px;
+      margin: 15px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .modal-content button {
+      width: 100%;
+      padding: 10px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .modal-content button:hover {
+      background-color: #1c50b0;
     }
 
     footer {
@@ -107,7 +163,7 @@
   <section class="hero">
     <h2>Smarter Supply Chain Tools. Minimal Effort.</h2>
     <p>Upstrail helps businesses optimize planning using Excel-based tools and light consulting — no heavy IT systems or long timelines required.</p>
-    <a href="siddharth@upstrail.com" class="button">Talk to Us</a>
+    <button class="button" onclick="openModal()">Talk to Us</button>
   </section>
 
   <section class="features">
@@ -125,8 +181,40 @@
     </div>
   </section>
 
+  <div id="contactModal" class="modal">
+    <div class="modal-content">
+      <h2>Leave Your Email</h2>
+      <input type="email" id="userEmail" placeholder="Enter your email" required>
+      <button onclick="submitEmail()">Submit</button>
+    </div>
+  </div>
+
   <footer>
     &copy; 2025 Upstrail. All rights reserved.
   </footer>
+
+  <script>
+    function openModal() {
+      document.getElementById('contactModal').style.display = 'block';
+    }
+
+    function submitEmail() {
+      const email = document.getElementById('userEmail').value;
+      if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address.');
+        return;
+      }
+      console.log('Captured email:', email); // placeholder
+      alert('Thanks! We will get in touch soon.');
+      document.getElementById('contactModal').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('contactModal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    }
+  </script>
 </body>
 </html>
