@@ -5,12 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Upstrail – Smarter Planning Tools</title>
   <style>
+    :root {
+      --primary-color: #2e6edb;
+      --accent-color: #f9a826;
+      --background-color: #f5f7fa;
+      --text-color: #333;
+      --footer-color: #888;
+    }
+
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #f5f7fa;
-      color: #333;
+      background: linear-gradient(135deg, var(--background-color), #e1e9f0);
+      color: var(--text-color);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -20,28 +28,33 @@
     }
     h1 {
       font-size: 2.5rem;
-      color: #222;
+      color: var(--primary-color);
     }
     p {
       font-size: 1.2rem;
       max-width: 600px;
       margin: 20px auto;
+      color: #444;
     }
     a.button {
       display: inline-block;
       margin-top: 20px;
       padding: 12px 24px;
-      background-color: #2e6edb;
+      background-color: var(--accent-color);
       color: white;
       text-decoration: none;
       border-radius: 5px;
       font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    a.button:hover {
+      background-color: #d68a1a;
     }
     footer {
       position: absolute;
       bottom: 20px;
       font-size: 0.9rem;
-      color: #888;
+      color: var(--footer-color);
     }
   </style>
 </head>
