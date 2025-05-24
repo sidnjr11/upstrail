@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upstrail – Downloads</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { font-family: Arial, sans-serif; background: #f7f9fc; margin: 0; padding: 0; }
+    header, footer { background: white; padding: 20px; text-align: center; }
+    h1 { color: #2e6edb; }
+    .plugin-card {
+      background: white;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border-left: 6px solid #f9a826;
+    }
+    .plugin-card h2 { margin-top: 0; color: #2e6edb; }
+    .plugin-card p { line-height: 1.5; color: #333; }
+    .download-btn {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 12px 24px;
+      background-color: #f9a826;
+      color: white;
+      font-weight: bold;
+      text-decoration: none;
+      border-radius: 6px;
+    }
+    .download-btn:hover {
+      background-color: #d58a1a;
+    }
+
+    /* Modal Styling */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+
+    .modal-content h2 {
+      margin-top: 0;
+    }
+
+    .modal-content input[type="email"] {
+      width: 100%;
+      padding: 10px;
+      margin: 15px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .modal-content button {
+      width: 100%;
+      padding: 10px;
+      background-color: #2e6edb;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .modal-content button:hover {
+      background-color: #1c50b0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Upstrail Plugin Library</h1>
+  <p>Excel-based tools to optimize supply chain decisions, one task at a time.</p>
+</header>
+
+<div class="plugin-card">
+  <h2>📦 Dead Stock Tracker (v1.1)</h2>
+  <p>This Excel plugin helps planners identify slow-moving or unsold SKUs using aging categories and recommended actions. Includes a full template, protected macros, and export options.</p>
+  <ul>
+    <li>✔ Built in Excel (no external tools)</li>
+    <li>✔ Recommended action logic</li>
+    <li>✔ Log tracking + PDF export</li>
+    <li>✔ README & version history included</li>
+  </ul>
+  <a class="download-btn" href="/downloads/Upstrail_Dead_Stock_Tracker_v1.1.zip" download onclick="showDownloadModal()">
+    📥 Download Plugin (.zip)
+  </a>
+</div>
+
+<!-- Email Modal (outside .plugin-card) -->
+<div id="downloadModal" class="modal">
+  <div class="modal-content">
+    <h2>Want updates when new plugins drop?</h2>
+    <input type="email" id="downloadEmail" placeholder="Enter your email" required>
+    <button onclick="submitDownloadEmail()">Notify Me</button>
+  </div>
+</div>
+
+<footer>
+  &copy; 2025 Upstrail. Built with care for planners.
+</footer>
+
+<script>
+  function showDownloadModal() {
+    setTimeout(() => {
+      document.getElementById('downloadModal').style.display = 'block';
+    }, 500);
+  }
+
+  function submitDownloadEmail() {
+    const email = document.getElementById('downloadEmail').value;
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid email.');
+      return;
+    }
+
+    fetch('https://script.google.com/macros/s/AKfycbzINA3ef956u7wTewP67JeVMsoXUAr_9k_nTDIFcemgkeIUvQHWl7AARuxovOmLhl4z/exec', {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `email=${encodeURIComponent(email)}`
+    });
+
+    alert('Thanks! You’ll be notified when new tools are added.');
+    document.getElementById('downloadEmail').value = '';
+    document.getElementById('downloadModal').style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('downloadModal');
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  }
+</script>
+
+</body>
+</html>
