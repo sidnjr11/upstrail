@@ -12,134 +12,136 @@
       --text-color: #222;
       --footer-color: #777;
       --section-bg: #ffffff;
+      --nav-bg: #ffffff;
+      --nav-height: 70px;
     }
 
-    * {
-      box-sizing: border-box;
-      scroll-behavior: smooth;
-    }
+    * { box-sizing: border-box; scroll-behavior: smooth; }
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
+      padding-top: var(--nav-height); /* Prevent content from hiding behind fixed nav */
       background: var(--background-color);
       color: var(--text-color);
       line-height: 1.6;
     }
 
-    header {
-      text-align: center;
-      padding: 10px 20px;
-      background-color: white;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-    
-    header img {
-      width: clamp(120px, 18vw, 220px);
-      height: auto;
-    }
-
-    header hr {
-      border: none;
-      border-top: 1px solid #ccc;
-      margin: 5px auto 0;
-      width: 90%;
-      max-width: 900px;
-    }
-
-    .hero {
-      text-align: center;
-      padding: 40px 20px;
-      background-color: var(--section-bg);
-    }
-
-    .hero h2 {
-      font-size: 1.75rem;
-      margin-bottom: 20px;
-    }
-
-    .hero p {
-      font-size: 1.1rem;
-      max-width: 700px;
-      margin: 0 auto 30px;
-    }
-
-    .button {
-      padding: 12px 24px;
-      background-color: var(--accent-color);
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 1rem;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    .button:hover {
-      background-color: #d58a1a;
-    }
-
-    .features {
+    /* --- TOP NAVIGATION BAR STYLES --- */
+    .navbar {
+      background-color: var(--nav-bg);
+      height: var(--nav-height);
+      border-bottom: 1px solid #e0e0e0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
       display: flex;
-      flex-wrap: wrap;
       justify-content: center;
-      padding: 40px 20px;
+    }
+
+    .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 100%;
+      width: 100%;
+      max-width: 1200px;
+      padding: 0 20px;
+    }
+
+    .nav-logo a {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      color: var(--text-color);
+      font-weight: bold;
+      font-size: 1.5rem;
+    }
+
+    .nav-logo img {
+      height: 40px;
+      margin-right: 10px;
+    }
+
+    .nav-menu {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
       gap: 20px;
     }
 
+    .nav-menu a {
+      color: #333;
+      text-decoration: none;
+      padding: 5px 10px;
+      font-weight: 500;
+      border-radius: 5px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    
+    .nav-menu a:hover, .nav-menu a.active {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    /* --- END OF NAV STYLES --- */
+
+    .hero { text-align: center; padding: 60px 20px; background-color: var(--section-bg); }
+    .hero h2 { font-size: 2rem; margin-bottom: 20px; }
+    .hero p { font-size: 1.1rem; max-width: 700px; margin: 0 auto 30px; }
+
+    .button {
+      padding: 12px 24px; background-color: var(--accent-color); color: white;
+      text-decoration: none; border-radius: 6px; font-weight: bold;
+      font-size: 1rem; border: none; cursor: pointer; transition: background-color 0.3s ease;
+    }
+    .button:hover { background-color: #d58a1a; }
+
+    .features { display: flex; flex-wrap: wrap; justify-content: center; padding: 60px 20px; gap: 20px; }
     .feature {
-      background: #f9f9f9;
-      border-radius: 10px;
-      padding: 20px;
-      flex: 1 1 280px;
-      max-width: 320px;
-      border: 1px solid #e3e6ea;
+      background: var(--section-bg); border-radius: 10px; padding: 30px; flex: 1 1 300px;
+      max-width: 350px; border: 1px solid #e3e6ea; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
+    .feature h3 { color: var(--primary-color); margin-top: 0; }
+    
+    footer { text-align: center; padding: 20px; font-size: 0.9rem; color: var(--footer-color); margin-top: 40px; }
 
-    .feature h3 {
-      color: var(--primary-color);
-      margin-top: 0;
-    }
-
-    footer {
-      text-align: center;
-      padding: 20px;
-      font-size: 0.9rem;
-      color: var(--footer-color);
-    }
-
-    @media (max-width: 600px) {
-      .hero h2 {
-        font-size: 1.25rem;
-      }
-      .hero p {
-        font-size: 0.95rem;
-      }
-      .features {
-        flex-direction: column;
-        align-items: center;
-      }
+    @media (max-width: 768px) {
+      .nav-menu { display: none; } /* Simplification for mobile, can be replaced with a hamburger menu later */
+      .hero h2 { font-size: 1.5rem; }
+      .features { flex-direction: column; align-items: center; }
     }
   </style>
 </head>
-
 <body>
-  <header>
-    <img src="logofinal.png" alt="Upstrail Logo">
-    <hr>
-  </header>
+  
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <a href="index.html">
+          <img src="logofinal.png" alt="Upstrail Logo">
+          <span>Upstrail</span>
+        </a>
+      </div>
+      <ul class="nav-menu">
+        <li><a href="index.html" class="active">Home</a></li>
+        <li><a href="downloads.html">Excel Tools</a></li>
+        <li><a href="sketch/index.html">Vision Modeler</a></li>
+      </ul>
+    </div>
+  </nav>
 
   <main>
-    <section class="hero" style="border-bottom: 1px solid #dce1e8;">
+    <section class="hero">
       <h2>Powerful Network Modeling. Instantly.</h2>
       <p>Visualize and optimize your supply chain right in your browser. No installs, no sign-ups, no demos. Just open a tool and start building.</p>
       <a href="sketch/index.html" class="button">Launch Network Modeler</a>
     </section>
 
-    <section class="features" style="border-bottom: 1px solid #dce1e8;">
+    <section class="features">
       <div class="feature">
         <h3>Instant Network Visualization</h3>
         <p>Use our browser-based 'Vision' tool to drag-and-drop nodes, map flows, and understand complex networks in minutes, not hours.</p>
@@ -154,7 +156,7 @@
       </div>
     </section>
 
-    <section style="background: #ffffff; padding: 60px 40px; text-align: center; max-width: 900px; margin: 40px auto; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 16px;">
+    <section style="background: var(--background-color); padding: 60px 20px; text-align: center;">
         <h3 style="color: var(--primary-color); font-size: 1.6rem; margin-bottom: 16px;">
           Our Tool-Kit
         </h3>
@@ -164,13 +166,6 @@
         <a href="downloads.html" class="button" style="display: inline-block; margin-top: 10px;">
           Browse All Tools & Plugins
         </a>
-    </section>
-
-    <section style="text-align: center; padding: 60px 40px; background-color: #f9fafc; border-top: 1px solid #e3e6ea;">
-      <h3 style="font-size: 1.6rem; color: var(--primary-color); margin-bottom: 10px;">Our Philosophy</h3>
-      <p style="font-size: 1rem; max-width: 700px; margin: 0 auto; color: #444;">
-        We believe powerful supply chain tools shouldn't be locked behind enterprise contracts and complex software. Our goal is to make planning and analysis accessible to everyone.
-      </p>
     </section>
   </main>
   
