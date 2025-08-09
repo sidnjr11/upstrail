@@ -1,9 +1,22 @@
+Of course. I have rewritten your `index.html` file to shift the focus from a consulting service to a hub for free, open-source tools.
+
+I have made the following key changes:
+
+1.  **Added a Left Sidebar Menu:** A new navigation menu is fixed on the left side with links to "Home" and "Tools & Downloads".
+2.  **Rewrote a Tonality:** All headlines and text have been changed to sound like a product/open-source offering, removing phrases like "light consulting" and "talk to us".
+3.  **Removed Service-Oriented Sections:** The "Ravi's Planning Journey" case study and the "Who We Work Best With" sections have been removed as they are characteristic of a consulting business.
+4.  **Replaced the Main Call-to-Action:** The "Talk to Us" button, which opened an email capture form, has been replaced with a "Launch Modeler" button, directing users to a tool.
+5.  **Eliminated the Contact Modal:** The popup modal for email submission and all associated JavaScript have been completely removed to align with the "no login" and "free to use" philosophy.
+
+Here is the complete, updated HTML code. You can replace your existing file with this.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Upstrail – Smarter Planning Tools</title>
+  <title>Upstrail – Free Supply Chain Tools</title>
   <style>
     :root {
       --primary-color: #2e6edb;
@@ -12,6 +25,8 @@
       --text-color: #222;
       --footer-color: #777;
       --section-bg: #ffffff;
+      --sidebar-bg: #2c3e50;
+      --sidebar-width: 240px;
     }
 
     * {
@@ -27,6 +42,49 @@
       color: var(--text-color);
       line-height: 1.6;
     }
+
+    /* --- NEW SIDEBAR STYLES --- */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: var(--sidebar-width);
+      height: 100%;
+      background-color: var(--sidebar-bg);
+      padding-top: 20px;
+      color: white;
+    }
+
+    .sidebar .logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .sidebar .logo img {
+        width: 70%;
+        max-width: 150px;
+        height: auto;
+    }
+
+    .sidebar a {
+      display: block;
+      color: #ecf0f1;
+      padding: 15px 25px;
+      text-decoration: none;
+      font-size: 1.1rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .sidebar a:hover, .sidebar a.active {
+      background-color: #34495e;
+    }
+
+    /* Main content area pushed to the right */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      padding: 20px 40px;
+    }
+    /* --- END OF SIDEBAR STYLES --- */
 
     header {
       background-color: white;
@@ -49,7 +107,7 @@
 
     .hero {
       text-align: center;
-      padding: 20px 20px;
+      padding: 40px 20px;
       background-color: var(--section-bg);
     }
 
@@ -59,7 +117,7 @@
     }
 
     .hero p {
-      font-size: 1rem;
+      font-size: 1.1rem;
       max-width: 700px;
       margin: 0 auto 30px;
     }
@@ -103,55 +161,6 @@
       margin-top: 0;
     }
 
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0, 0, 0, 0.6);
-    }
-
-    .modal-content {
-      background-color: #fff;
-      margin: 10% auto;
-      padding: 20px;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 400px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .modal-content h2 {
-      margin-top: 0;
-    }
-
-    .modal-content input[type="email"] {
-      width: 100%;
-      padding: 10px;
-      margin: 15px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-
-    .modal-content button {
-      width: 100%;
-      padding: 10px;
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-
-    .modal-content button:hover {
-      background-color: #1c50b0;
-    }
-
     footer {
       text-align: center;
       padding: 20px;
@@ -159,7 +168,29 @@
       color: var(--footer-color);
     }
 
-    @media (max-width: 600px) {
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding-top: 0;
+      }
+      .sidebar .logo {
+          display: none; /* Hide logo in mobile bar to save space */
+      }
+      .sidebar a {
+        padding: 15px 10px;
+        flex: 1;
+        text-align: center;
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 20px;
+      }
       header h1 {
         font-size: 1.75rem;
       }
@@ -179,110 +210,72 @@
 </head>
 
 <body>
-  <header style="text-align: center; padding: 10px 20px 10px; background-color: white; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);">
-    <img src="logofinal.png" alt="Upstrail Logo" style="width: clamp(120px, 18vw, 220px); height: auto;">
 
-    
-    <hr style="border: none; border-top: 1px solid #ccc; margin: 5px auto 0; width: 90%; max-width: 900px;">
-  <section class="hero" style="border-bottom: 1px solid #dce1e8;">
-    <h2>Smarter Supply Chain Tools. Minimal Effort.</h2>
-    <p>Upstrail helps businesses optimize planning using Excel-based tools and light consulting — no heavy IT systems or long timelines required.</p>
-	<button class="button" onclick="openModal()">Talk to Us</button>
-
-  <section class="features" style="border-bottom: 1px solid #dce1e8;">
-  <div class="feature">
-    <h3>Automate Excel Workflows</h3>
-    <p>Turn error-prone Excel operations into one-click, rule-based automations that reduce effort and eliminate chaos — using simple add-ins built for your context.</p>
-  </div>
-  <div class="feature">
-    <h3>Visualize the Real Bottlenecks</h3>
-    <p>Use dashboards built with open tools like Streamlit or Power BI to spot dead stock, leaks, and gaps in supply-demand matching — no complex software required.</p>
-  </div>
-  <div class="feature">
-    <h3>Fast, Fit-for-Purpose Tools</h3>
-    <p>We build tools that slide into your team's day-to-day — Excel-native, ERP-adjacent, and usable by ops teams with zero training overhead.</p>
-  </div>
-</section>
-
-
-  <section style="background: white; padding: 60px 40px; text-align: center; max-width: 900px; margin: 40px auto; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 16px; border-bottom: 1px solid #dce1e8;">
-  <h3 style="color: var(--primary-color); font-size: 1.5rem; margin-bottom: 20px;">Ravi's Planning Journey</h3>
-  <p style="font-size: 1rem; max-width: 700px; margin: 0 auto 20px;">
-    <strong>Before:</strong> Ravi manually consolidated 6 Excel files and spent 4+ hours per week firefighting stock issues.
-  </p>
-  <p style="font-size: 1rem; max-width: 700px; margin: 0 auto 20px;">
-    <strong>With Upstrail:</strong> He received a custom Excel-native tool to match plans with actuals in real time.
-  </p>
-  <p style="font-size: 1rem; max-width: 700px; margin: 0 auto 0;">
-    <strong>Now:</strong> Weekly planning takes 30 mins. No new systems. No manuals. Just automation in his own file.
-  </p>
-<p style="font-style: italic; color: #444; margin-top: 30px; max-width: 600px; margin-left: auto; margin-right: auto;">
-    “Ravi's not alone. We’re building tools like this for small and mid-sized teams that don’t have time to rip-and-replace.”
-  </p>
-  
-	<section style="background: #ffffff; padding: 60px 40px; text-align: center; max-width: 900px; margin: 40px auto; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 16px; border-bottom: 1px solid #dce1e8;">
-	  <h3 style="color: var(--primary-color); font-size: 1.6rem; margin-bottom: 16px;">
-		Ready-to-Use Planning Tools
-	  </h3>
-	  <p style="font-size: 1rem; max-width: 700px; margin: 0 auto 20px; color: #444;">
-		Free simple Excel plugins for everyday ops — dead stock, reorder logic, and more.
-	  </p>
-	  <p style="font-size: 1rem; max-width: 700px; margin: 0 auto 24px; color: #444;">
-		Want something custom? We build bigger tools too. Just reach out.
-	  </p>
-	  <a href="/downloads.html" class="button" style="display: inline-block; margin-top: 10px;">
-		Browse All Plugins
-	  </a>
-	</section>
-		
-  <section style="text-align: center; padding: 60px 40px; background-color: #f9fafc; border-top: 1px solid #e3e6ea; border-bottom: 1px solid #dce1e8;">
-    <h3 style="font-size: 1.6rem; color: var(--primary-color); margin-bottom: 10px;">Who We Work Best With</h3>
-    <p style="font-size: 1rem; max-width: 700px; margin: 0 auto; color: #444;">
-      Teams at small and mid-sized CPG, manufacturing, or retail companies who live in Excel and just want things to work — without big systems or big consulting.
-    </p>
-  </section>
-
-  <div id="contactModal" class="modal">
-    <div class="modal-content">
-      <h2>Leave Your Email</h2>
-      <input type="email" id="userEmail" placeholder="Enter your email" required>
-      <button onclick="submitEmail()">Submit</button>
+  <nav class="sidebar">
+    <div class="logo">
+        <img src="logofinal.png" alt="Upstrail Logo">
     </div>
-  </div>
+    <a href="#home" class="active">Home</a>
+    <a href="#tools">Tools & Downloads</a>
+  </nav>
+  
+  <div class="main-content">
+    
+    <header id="home" style="padding-top: 0; padding-bottom: 20px;">
+        <h1>Free & Open Source Supply Chain Tools</h1>
+        <p>Built for students, analysts, and teams who need answers now.</p>
+    </header>
 
-  <footer>
-    &copy; 2025 Upstrail. All rights reserved.
-  </footer>
+    <section class="hero" style="border-bottom: 1px solid #dce1e8;">
+      <h2>Powerful Network Modeling. Instantly.</h2>
+      <p>Visualize and optimize your supply chain right in your browser. No installs, no sign-ups, no demos. Just open a tool and start building.</p>
+      <a href="vision.html" class="button">Launch Network Modeler</a>
+    </section>
+
+    <section class="features" style="border-bottom: 1px solid #dce1e8;">
+      <div class="feature">
+        <h3>Instant Network Visualization</h3>
+        <p>Use our browser-based 'Vision' tool to drag-and-drop nodes, map flows, and understand complex networks in minutes, not hours.</p>
+      </div>
+      <div class="feature">
+        <h3>Free Excel Add-Ins</h3>
+        <p>Download simple, open-source plugins to automate your most common operational tasks like reorder calculations and dead stock analysis.</p>
+      </div>
+      <div class="feature">
+        <h3>Community Driven & Practical</h3>
+        <p>Our tools are built to be practical and solve real-world problems without the overhead of enterprise software. Contribute on GitHub!</p>
+      </div>
+    </section>
+
+    <section id="tools" style="background: #ffffff; padding: 60px 40px; text-align: center; max-width: 900px; margin: 40px auto; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 16px;">
+        <h3 style="color: var(--primary-color); font-size: 1.6rem; margin-bottom: 16px;">
+          Our Tool-Kit
+        </h3>
+        <p style="font-size: 1rem; max-width: 700px; margin: 0 auto 24px; color: #444;">
+          A growing collection of free, open-source tools for everyday supply chain analysis.
+        </p>
+        <a href="/downloads.html" class="button" style="display: inline-block; margin-top: 10px;">
+          Browse All Tools & Plugins
+        </a>
+    </section>
+
+    <section style="text-align: center; padding: 60px 40px; background-color: #f9fafc; border-top: 1px solid #e3e6ea;">
+      <h3 style="font-size: 1.6rem; color: var(--primary-color); margin-bottom: 10px;">Our Philosophy</h3>
+      <p style="font-size: 1rem; max-width: 700px; margin: 0 auto; color: #444;">
+        We believe powerful supply chain tools shouldn't be locked behind enterprise contracts and complex software. Our goal is to make planning and analysis accessible to everyone.
+      </p>
+    </section>
+
+    <footer>
+      &copy; 2025 Upstrail. All rights reserved.
+    </footer>
+
+  </div>
 
   <script>
-    function openModal() {
-      document.getElementById('contactModal').style.display = 'block';
-    }
-
-    function submitEmail() {
-      const email = document.getElementById('userEmail').value;
-      if (!email || !email.includes('@')) {
-        alert('Please enter a valid email address.');
-        return;
-      }
-
-      fetch('https://script.google.com/macros/s/AKfycbzINA3ef956u7wTewP67JeVMsoXUAr_9k_nTDIFcemgkeIUvQHWl7AARuxovOmLhl4z/exec', {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `email=${encodeURIComponent(email)}`
-      });
-
-      alert('Thanks! Your email has been recorded.');
-      document.getElementById('contactModal').style.display = 'none';
-    }
-
-    window.onclick = function(event) {
-      const modal = document.getElementById('contactModal');
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
-    }
+    // No script needed for a modal anymore. 
+    // You can add other simple interactions here if you want.
   </script>
 </body>
 </html>
+```
