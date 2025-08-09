@@ -1,581 +1,947 @@
-// Vision Supply Chain Diagram Application
-class VisionApp {
+class SupplyChainCanvas {
     constructor() {
         this.canvas = document.getElementById('canvas');
-        this.canvasContainer = document.getElementById('canvasContainer');
-        this.elementsLayer = document.getElementById('elementsLayer');
-        this.connectionsLayer = document.getElementById('connectionsLayer');
-        this.tempConnection = document.getElementById('tempConnection');
-        this.statusText = document.getElementById('statusText');
-        this.zoomLevel = document.getElementById('zoomLevel');
-        
-        this.currentTool = null;
-        this.elements = [];
+        this.ctx = this.canvas.getContext('2d');
+        this.nodes = [];
         this.connections = [];
-        this.selectedElement = null;
-        this.zoom = 1;
+        this.selectedNode = null;
+        this.currentTool = 'select';
         this.isDragging = false;
-        this.isConnecting = false;
-        this.connectionStart = null;
         this.dragOffset = { x: 0, y: 0 };
-        this.elementCounter = 0;
-
-        this.elementTypes = {
-            material: { shape: 'triangle', color: '#4CAF50', size: 40 },
-            resource: { shape: 'inverted-triangle', color: '#2196F3', size: 40 },
-            activity: { shape: 'circle', color: '#FF9800', size: 40 },
-            bom: { shape: 'gear', color: '#9C27B0', size: 40 },
-            distribution: { shape: 'truck', color: '#F44336', size: 40 }
+        this.connectingFrom = null;
+        this.nodeCounter = 0;
+        this.contextMenuNode = null;
+        
+        // Sample data from the provided JSON
+        this.sampleData = {
+            nodes: [
+                {id: "m1", type: "material", label: "Raw Materials", x: 100, y: 150, shape: "triangle"},
+                {id: "a1", type: "activity", label: "Manufacturing", x: 250, y: 150, shape: "circle"},
+                {id: "m2", type: "material", label: "Finished Goods", x: 400, y: 150, shape: "triangle"},
+                {id: "a2", type: "activity", label: "Distribution", x: 550, y: 150, shape: "circle"},
+                {id: "m3", type: "material", label: "Retail Store", x: 700, y: 150, shape: "triangle"}
+            ],
+            connections: [
+                {from: "m1", to: "a1"},
+                {from: "a1", to: "m2"},
+                {from: "m2", to: "a2"},
+                {from: "a2", to: "m3"}
+            ]
         };
-
-        this.nlpKeywords = {
-            materials: ['material', 'raw material', 'input', 'component'],
-            resources: ['resource', 'equipment', 'facility', 'tool'],
-            activities: ['activity', 'process', 'operation', 'plant', 'factory', 'manufacturing'],
-            bom: ['bom', 'bill of materials', 'assembly'],
-            distribution: ['distribution', 'warehouse', 'distribution center', 'logistics', 'shipping', 'truck'],
-            connections: ['connected to', 'supplies', 'provides', 'feeds', 'via', 'through', 'linked to']
+        
+        this.initEventListeners();
+        this.updateDebugInfo();
+        this.draw();
+    }
+    
+    // CRITICAL FIX: Proper mouse position calculation using getBoundingClientRect
+    getMousePos(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top
         };
-
-        this.init();
     }
-
-    init() {
-        this.setupEventListeners();
-        this.updateStatus('Ready - Select a tool to start creating your supply chain diagram');
+    
+    updateDebugInfo() {
+        document.getElementById('canvasSize').textContent = `${this.canvas.width}×${this.canvas.height}`;
+        
+        // Update mouse coordinates on mousemove for the entire canvas
+        this.canvas.addEventListener('mousemove', (e) => {
+            const pos = this.getMousePos(e);
+            document.getElementById('mouseCoords').textContent = `${Math.round(pos.x)}, ${Math.round(pos.y)}`;
+        });
+        
+        // Clear coordinates when mouse leaves canvas
+        this.canvas.addEventListener('mouseleave', () => {
+            document.getElementById('mouseCoords').textContent = '-';
+        });
     }
-
-    setupEventListeners() {
+    
+    initEventListeners() {
         // Tool selection
-        document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
-            btn.addEventListener('click', (e) => this.selectTool(e.target.closest('.tool-btn').dataset.tool));
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentTool = btn.dataset.tool;
+                this.updateCanvasCursor();
+                this.updateStatusText();
+                
+                // Reset connecting state when switching tools
+                if (this.currentTool !== 'connect') {
+                    this.connectingFrom = null;
+                }
+                this.draw();
+            });
         });
-
-        // Canvas interactions
-        this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
-        this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+        
+        // CRITICAL FIX: Canvas events with proper coordinate handling
+        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        this.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
+        this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
+        
+        // Prevent context menu on canvas
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-        // Zoom controls
-        document.getElementById('zoomIn').addEventListener('click', () => this.zoomIn());
-        document.getElementById('zoomOut').addEventListener('click', () => this.zoomOut());
-        this.canvasContainer.addEventListener('wheel', (e) => this.handleWheel(e));
-
-        // Clear canvas
-        document.getElementById('clearCanvas').addEventListener('click', () => this.clearCanvas());
-
-        // NLP generation
-        document.getElementById('generateBtn').addEventListener('click', () => this.generateFromNLP());
-        document.getElementById('nlpInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.generateFromNLP();
-        });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
-    }
-
-    selectTool(tool) {
-        // Remove active class from all tools
-        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
         
-        // Add active class to selected tool
-        const toolBtn = document.querySelector(`[data-tool="${tool}"]`);
-        if (toolBtn) toolBtn.classList.add('active');
+        // Header buttons
+        document.getElementById('saveBtn').addEventListener('click', this.save.bind(this));
+        document.getElementById('loadBtn').addEventListener('click', this.load.bind(this));
+        document.getElementById('exportBtn').addEventListener('click', this.exportPNG.bind(this));
+        document.getElementById('clearBtn').addEventListener('click', this.clear.bind(this));
+        document.getElementById('loadExampleBtn').addEventListener('click', this.loadExample.bind(this));
+        document.getElementById('generateBtn').addEventListener('click', this.generateFromNL.bind(this));
         
-        this.currentTool = tool;
-        this.canvasContainer.className = 'canvas-container';
-        this.canvasContainer.classList.add(`tool-${tool}`);
+        // Context menu
+        document.getElementById('addConnectedMaterial').addEventListener('click', this.addConnectedMaterial.bind(this));
+        document.getElementById('addConnectedActivity').addEventListener('click', this.addConnectedActivity.bind(this));
+        document.getElementById('editLabel').addEventListener('click', this.editLabel.bind(this));
+        document.getElementById('deleteNode').addEventListener('click', this.deleteSelectedNode.bind(this));
         
-        this.updateStatus(`${tool.charAt(0).toUpperCase() + tool.slice(1)} tool selected - Click on canvas to place element`);
-    }
-
-    handleCanvasClick(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / this.zoom;
-        const y = (e.clientY - rect.top) / this.zoom;
-
-        if (this.currentTool && this.elementTypes[this.currentTool]) {
-            this.createElement(this.currentTool, x, y);
-        }
-    }
-
-    createElement(type, x, y) {
-        const element = {
-            id: `element-${++this.elementCounter}`,
-            type: type,
-            x: x,
-            y: y,
-            width: this.elementTypes[type].size,
-            height: this.elementTypes[type].size,
-            selected: false
-        };
-
-        this.elements.push(element);
-        this.renderElement(element);
-        this.updateStatus(`${type.charAt(0).toUpperCase() + type.slice(1)} added to canvas`);
-    }
-
-    renderElement(element) {
-        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        group.classList.add('canvas-element', `element-${element.type}`, 'element-created');
-        group.dataset.elementId = element.id;
-        group.setAttribute('transform', `translate(${element.x}, ${element.y})`);
-
-        const shape = this.createShape(element);
-        group.appendChild(shape);
-
-        // Add connection points
-        const points = this.getConnectionPoints(element);
-        points.forEach((point, index) => {
-            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            circle.classList.add('connection-point');
-            circle.setAttribute('cx', point.x - element.x);
-            circle.setAttribute('cy', point.y - element.y);
-            circle.setAttribute('r', 3);
-            circle.dataset.pointIndex = index;
-            group.appendChild(circle);
-        });
-
-        // Add event listeners
-        group.addEventListener('mousedown', (e) => this.handleElementMouseDown(e, element));
-        group.addEventListener('click', (e) => this.handleElementClick(e, element));
-
-        this.elementsLayer.appendChild(group);
-    }
-
-    createShape(element) {
-        const { type } = element;
-        const config = this.elementTypes[type];
-        const size = config.size;
-        const halfSize = size / 2;
-
-        switch (config.shape) {
-            case 'triangle':
-                const triangle = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                triangle.setAttribute('points', `${halfSize},${-halfSize} ${size},${halfSize} ${0},${halfSize}`);
-                triangle.classList.add(`element-${type}`);
-                return triangle;
-
-            case 'inverted-triangle':
-                const invTriangle = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                invTriangle.setAttribute('points', `${0},${-halfSize} ${size},${-halfSize} ${halfSize},${halfSize}`);
-                invTriangle.classList.add(`element-${type}`);
-                return invTriangle;
-
-            case 'circle':
-                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circle.setAttribute('cx', halfSize);
-                circle.setAttribute('cy', 0);
-                circle.setAttribute('r', halfSize);
-                circle.classList.add(`element-${type}`);
-                return circle;
-
-            case 'gear':
-                const gear = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                const gearPath = `M${halfSize},${-halfSize} L${halfSize + 6},${-halfSize + 10} L${size},${-halfSize + 10} L${size - 6},${halfSize - 10} L${size},${halfSize} L${halfSize + 6},${halfSize - 6} L${halfSize},${halfSize} L${halfSize - 6},${halfSize - 6} L${0},${halfSize} L${6},${halfSize - 10} L${0},${-halfSize + 10} L${halfSize - 6},${-halfSize + 10} Z`;
-                gear.setAttribute('d', gearPath);
-                gear.classList.add(`element-${type}`);
-                return gear;
-
-            case 'truck':
-                const truck = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                
-                // Main body
-                const body = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                body.setAttribute('x', 0);
-                body.setAttribute('y', -10);
-                body.setAttribute('width', 25);
-                body.setAttribute('height', 15);
-                body.classList.add(`element-${type}`);
-                
-                // Cab
-                const cab = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                cab.setAttribute('x', 25);
-                cab.setAttribute('y', -6);
-                cab.setAttribute('width', 15);
-                cab.setAttribute('height', 12);
-                cab.classList.add(`element-${type}`);
-                
-                // Wheels
-                const wheel1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                wheel1.setAttribute('cx', 8);
-                wheel1.setAttribute('cy', 8);
-                wheel1.setAttribute('r', 4);
-                wheel1.classList.add(`element-${type}`);
-                
-                const wheel2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                wheel2.setAttribute('cx', 32);
-                wheel2.setAttribute('cy', 8);
-                wheel2.setAttribute('r', 4);
-                wheel2.classList.add(`element-${type}`);
-                
-                truck.appendChild(body);
-                truck.appendChild(cab);
-                truck.appendChild(wheel1);
-                truck.appendChild(wheel2);
-                
-                return truck;
-
-            default:
-                return circle;
-        }
-    }
-
-    getConnectionPoints(element) {
-        const { x, y, width, height } = element;
-        const halfWidth = width / 2;
-        const halfHeight = height / 2;
-
-        return [
-            { x: x + halfWidth, y: y - halfHeight }, // top
-            { x: x + width, y: y }, // right
-            { x: x + halfWidth, y: y + halfHeight }, // bottom
-            { x: x, y: y } // left
-        ];
-    }
-
-    handleElementMouseDown(e, element) {
-        e.stopPropagation();
+        // Edit modal
+        document.getElementById('saveEditBtn').addEventListener('click', this.saveEdit.bind(this));
+        document.getElementById('cancelEditBtn').addEventListener('click', this.cancelEdit.bind(this));
         
-        if (this.currentTool === 'delete') {
-            this.deleteElement(element);
-            return;
-        }
-
-        if (this.currentTool === 'connect') {
-            this.startConnection(element, e);
-            return;
-        }
-
-        // Start dragging
-        this.selectedElement = element;
-        this.selectElement(element);
+        // File input
+        document.getElementById('fileInput').addEventListener('change', this.handleFileLoad.bind(this));
         
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = (e.clientX - rect.left) / this.zoom;
-        const mouseY = (e.clientY - rect.top) / this.zoom;
-        
-        this.dragOffset = {
-            x: mouseX - element.x,
-            y: mouseY - element.y
-        };
-        
-        this.isDragging = true;
-    }
-
-    handleElementClick(e, element) {
-        e.stopPropagation();
-        this.selectElement(element);
-    }
-
-    selectElement(element) {
-        // Deselect all elements
-        this.elements.forEach(el => {
-            el.selected = false;
-            const group = document.querySelector(`[data-element-id="${el.id}"]`);
-            if (group) group.classList.remove('selected');
-        });
-
-        // Select clicked element
-        element.selected = true;
-        const group = document.querySelector(`[data-element-id="${element.id}"]`);
-        if (group) group.classList.add('selected');
-        
-        this.selectedElement = element;
-    }
-
-    handleMouseMove(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const mouseX = (e.clientX - rect.left) / this.zoom;
-        const mouseY = (e.clientY - rect.top) / this.zoom;
-
-        if (this.isDragging && this.selectedElement) {
-            const newX = mouseX - this.dragOffset.x;
-            const newY = mouseY - this.dragOffset.y;
+        // Global click handler to hide context menu and modal
+        document.addEventListener('click', (e) => {
+            const contextMenu = document.getElementById('contextMenu');
+            const editModal = document.getElementById('editModal');
             
-            this.moveElement(this.selectedElement, newX, newY);
-        }
-
-        if (this.isConnecting && this.connectionStart) {
-            this.updateTempConnection(mouseX, mouseY);
-        }
-    }
-
-    handleMouseUp(e) {
-        if (this.isConnecting) {
-            const target = e.target.closest('.canvas-element');
-            if (target && target.dataset.elementId !== this.connectionStart.id) {
-                const targetElement = this.elements.find(el => el.id === target.dataset.elementId);
-                if (targetElement) {
-                    this.createConnection(this.connectionStart, targetElement);
+            // Hide context menu if clicking outside of it
+            if (!contextMenu.contains(e.target) && 
+                !e.target.closest('canvas') && 
+                !contextMenu.classList.contains('hidden')) {
+                this.hideContextMenu();
+            }
+            
+            // Hide modal if clicking outside of modal content
+            if (e.target === editModal) {
+                this.cancelEdit();
+            }
+        });
+        
+        // Handle Enter and Escape keys in edit modal
+        document.addEventListener('keydown', (e) => {
+            const editModal = document.getElementById('editModal');
+            if (!editModal.classList.contains('hidden')) {
+                if (e.key === 'Enter') {
+                    this.saveEdit();
+                } else if (e.key === 'Escape') {
+                    this.cancelEdit();
                 }
             }
-            this.endConnection();
-        }
-
-        this.isDragging = false;
-        this.selectedElement = null;
-    }
-
-    moveElement(element, x, y) {
-        element.x = Math.max(0, Math.min(x, 2400 - element.width));
-        element.y = Math.max(0, Math.min(y, 1600 - element.height));
-        
-        const group = document.querySelector(`[data-element-id="${element.id}"]`);
-        if (group) {
-            group.setAttribute('transform', `translate(${element.x}, ${element.y})`);
-        }
-        
-        this.updateConnections(element);
-    }
-
-    startConnection(element, e) {
-        this.isConnecting = true;
-        this.connectionStart = element;
-        this.canvasContainer.classList.add('connecting-mode');
-        
-        const rect = this.canvas.getBoundingClientRect();
-        const startX = element.x + element.width / 2;
-        const startY = element.y;
-        
-        this.tempConnection.setAttribute('x1', startX);
-        this.tempConnection.setAttribute('y1', startY);
-        this.tempConnection.style.display = 'block';
-        
-        this.updateStatus('Click on another element to create connection');
-    }
-
-    updateTempConnection(mouseX, mouseY) {
-        this.tempConnection.setAttribute('x2', mouseX);
-        this.tempConnection.setAttribute('y2', mouseY);
-    }
-
-    endConnection() {
-        this.isConnecting = false;
-        this.connectionStart = null;
-        this.tempConnection.style.display = 'none';
-        this.canvasContainer.classList.remove('connecting-mode');
-        this.updateStatus('Connection mode ended');
-    }
-
-    createConnection(startElement, endElement) {
-        const connection = {
-            id: `connection-${Date.now()}`,
-            start: startElement.id,
-            end: endElement.id,
-            startPoint: this.getConnectionPoints(startElement)[1], // right
-            endPoint: this.getConnectionPoints(endElement)[3] // left
-        };
-
-        this.connections.push(connection);
-        this.renderConnection(connection);
-        this.updateStatus(`Connection created between ${startElement.type} and ${endElement.type}`);
-    }
-
-    renderConnection(connection) {
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.classList.add('connection-line');
-        line.dataset.connectionId = connection.id;
-        line.setAttribute('x1', connection.startPoint.x);
-        line.setAttribute('y1', connection.startPoint.y);
-        line.setAttribute('x2', connection.endPoint.x);
-        line.setAttribute('y2', connection.endPoint.y);
-        line.setAttribute('marker-end', 'url(#arrowhead)');
-        
-        line.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.selectConnection(connection);
+            
+            // Hide context menu on Escape
+            if (e.key === 'Escape' && !document.getElementById('contextMenu').classList.contains('hidden')) {
+                this.hideContextMenu();
+            }
         });
-
-        this.connectionsLayer.appendChild(line);
     }
-
-    updateConnections(element) {
-        this.connections.forEach(connection => {
-            if (connection.start === element.id || connection.end === element.id) {
-                const startElement = this.elements.find(el => el.id === connection.start);
-                const endElement = this.elements.find(el => el.id === connection.end);
-                
-                if (startElement && endElement) {
-                    connection.startPoint = this.getConnectionPoints(startElement)[1];
-                    connection.endPoint = this.getConnectionPoints(endElement)[3];
+    
+    updateCanvasCursor() {
+        const container = this.canvas.parentElement.parentElement;
+        container.className = `canvas-container tool-${this.currentTool}`;
+        
+        if (this.isDragging) {
+            container.classList.add('dragging');
+        }
+    }
+    
+    updateStatusText() {
+        const statusMap = {
+            select: 'Click and drag to move nodes. Right-click for context menu. Double-click to edit labels.',
+            material: 'Click to add a Material node (triangle).',
+            activity: 'Click to add an Activity node (circle).',
+            connect: 'Click two nodes to create a connection. Valid: Material ↔ Activity only.',
+            delete: 'Click a node or connection to delete it.'
+        };
+        document.getElementById('statusText').textContent = statusMap[this.currentTool] || 'Ready';
+    }
+    
+    updateDragStatus(status) {
+        document.getElementById('dragStatus').textContent = status;
+    }
+    
+    handleMouseDown(e) {
+        // Hide context menu on any click on canvas
+        this.hideContextMenu();
+        
+        // CRITICAL FIX: Use proper mouse position calculation
+        const pos = this.getMousePos(e);
+        const clickedNode = this.getNodeAt(pos.x, pos.y);
+        
+        switch (this.currentTool) {
+            case 'select':
+                if (clickedNode) {
+                    this.selectedNode = clickedNode;
+                    this.isDragging = true;
                     
-                    const line = document.querySelector(`[data-connection-id="${connection.id}"]`);
-                    if (line) {
-                        line.setAttribute('x1', connection.startPoint.x);
-                        line.setAttribute('y1', connection.startPoint.y);
-                        line.setAttribute('x2', connection.endPoint.x);
-                        line.setAttribute('y2', connection.endPoint.y);
+                    // CRITICAL FIX: Calculate drag offset properly
+                    this.dragOffset = {
+                        x: pos.x - clickedNode.x,
+                        y: pos.y - clickedNode.y
+                    };
+                    
+                    this.updateCanvasCursor();
+                    this.updateDragStatus('Dragging: ' + clickedNode.label);
+                } else {
+                    this.selectedNode = null;
+                    this.updateDragStatus('Ready');
+                }
+                break;
+                
+            case 'material':
+                this.addNode('material', pos.x, pos.y);
+                break;
+                
+            case 'activity':
+                this.addNode('activity', pos.x, pos.y);
+                break;
+                
+            case 'connect':
+                if (clickedNode) {
+                    if (!this.connectingFrom) {
+                        this.connectingFrom = clickedNode;
+                        this.selectedNode = clickedNode;
+                        this.showStatus(`Selected ${clickedNode.label}. Click another node to connect.`, 'info');
+                    } else if (this.connectingFrom !== clickedNode) {
+                        if (this.createConnection(this.connectingFrom, clickedNode)) {
+                            this.connectingFrom = null;
+                            this.selectedNode = null;
+                        }
+                    } else {
+                        // Clicked the same node, deselect
+                        this.connectingFrom = null;
+                        this.selectedNode = null;
+                        this.showStatus('Connection cancelled.', 'info');
+                    }
+                } else {
+                    this.connectingFrom = null;
+                    this.selectedNode = null;
+                }
+                break;
+                
+            case 'delete':
+                if (clickedNode) {
+                    this.deleteNode(clickedNode);
+                } else {
+                    const connection = this.getConnectionAt(pos.x, pos.y);
+                    if (connection) {
+                        this.deleteConnection(connection);
                     }
                 }
-            }
-        });
+                break;
+        }
+        
+        this.draw();
     }
-
-    deleteElement(element) {
-        // Remove connections
-        this.connections = this.connections.filter(conn => 
-            conn.start !== element.id && conn.end !== element.id
+    
+    handleMouseMove(e) {
+        // CRITICAL FIX: Only handle dragging when actually dragging
+        if (this.isDragging && this.selectedNode && this.currentTool === 'select') {
+            const pos = this.getMousePos(e);
+            
+            // CRITICAL FIX: Use proper offset calculation
+            this.selectedNode.x = pos.x - this.dragOffset.x;
+            this.selectedNode.y = pos.y - this.dragOffset.y;
+            
+            // Keep nodes within canvas bounds
+            this.selectedNode.x = Math.max(30, Math.min(this.canvas.width - 30, this.selectedNode.x));
+            this.selectedNode.y = Math.max(30, Math.min(this.canvas.height - 80, this.selectedNode.y));
+            
+            this.draw();
+        }
+    }
+    
+    handleMouseUp(e) {
+        if (this.isDragging) {
+            this.isDragging = false;
+            this.updateCanvasCursor();
+            this.updateDragStatus('Ready');
+        }
+    }
+    
+    handleRightClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const pos = this.getMousePos(e);
+        const clickedNode = this.getNodeAt(pos.x, pos.y);
+        
+        if (clickedNode) {
+            this.contextMenuNode = clickedNode;
+            this.selectedNode = clickedNode;
+            this.showContextMenu(e.clientX, e.clientY);
+            this.draw();
+        } else {
+            this.hideContextMenu();
+        }
+    }
+    
+    handleDoubleClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const pos = this.getMousePos(e);
+        const clickedNode = this.getNodeAt(pos.x, pos.y);
+        
+        if (clickedNode) {
+            this.selectedNode = clickedNode;
+            this.contextMenuNode = clickedNode;
+            this.editLabel();
+            this.draw();
+        }
+    }
+    
+    addNode(type, x, y, label = null) {
+        const defaultLabels = {
+            material: `Material ${this.nodeCounter + 1}`,
+            activity: `Activity ${this.nodeCounter + 1}`
+        };
+        
+        const node = {
+            id: `node_${++this.nodeCounter}`,
+            type: type,
+            shape: type === 'material' ? 'triangle' : 'circle',
+            label: label || defaultLabels[type],
+            x: x,
+            y: y
+        };
+        
+        this.nodes.push(node);
+        this.selectedNode = node;
+        this.showStatus(`Added ${node.label}`, 'success');
+        this.draw();
+        return node;
+    }
+    
+    createConnection(fromNode, toNode) {
+        if (!this.canConnect(fromNode, toNode)) {
+            this.showStatus(`Invalid connection! ${fromNode.type} cannot connect to ${toNode.type}`, 'error');
+            return false;
+        }
+        
+        // Check if connection already exists
+        const existingConnection = this.connections.find(conn => 
+            (conn.from === fromNode.id && conn.to === toNode.id) ||
+            (conn.from === toNode.id && conn.to === fromNode.id)
         );
         
-        // Remove from DOM
-        const group = document.querySelector(`[data-element-id="${element.id}"]`);
-        if (group) group.remove();
-        
-        // Remove connection lines from DOM
-        document.querySelectorAll('.connection-line').forEach(line => {
-            const connection = this.connections.find(conn => conn.id === line.dataset.connectionId);
-            if (!connection) line.remove();
-        });
-        
-        // Remove from elements array
-        this.elements = this.elements.filter(el => el.id !== element.id);
-        
-        this.updateStatus(`${element.type} deleted`);
-    }
-
-    zoomIn() {
-        this.zoom = Math.min(this.zoom * 1.2, 3);
-        this.applyZoom();
-    }
-
-    zoomOut() {
-        this.zoom = Math.max(this.zoom / 1.2, 0.3);
-        this.applyZoom();
-    }
-
-    applyZoom() {
-        this.canvas.style.transform = `scale(${this.zoom})`;
-        this.canvas.style.transformOrigin = '0 0';
-        this.zoomLevel.textContent = Math.round(this.zoom * 100) + '%';
-    }
-
-    handleWheel(e) {
-        e.preventDefault();
-        if (e.deltaY < 0) {
-            this.zoomIn();
-        } else {
-            this.zoomOut();
+        if (existingConnection) {
+            this.showStatus('Connection already exists!', 'warning');
+            return false;
         }
-    }
-
-    clearCanvas() {
-        if (this.elements.length === 0) return;
         
-        if (confirm('Are you sure you want to clear the entire canvas?')) {
-            this.elements = [];
-            this.connections = [];
-            this.elementsLayer.innerHTML = '';
-            this.connectionsLayer.innerHTML = '';
-            this.updateStatus('Canvas cleared');
-        }
-    }
-
-    generateFromNLP() {
-        const input = document.getElementById('nlpInput').value.trim();
-        if (!input) return;
-
-        this.updateStatus('Generating diagram from description...');
-        document.body.classList.add('generating');
-
-        setTimeout(() => {
-            try {
-                this.parseNLPInput(input);
-            } finally {
-                document.body.classList.remove('generating');
-            }
-        }, 500);
-    }
-
-    parseNLPInput(input) {
-        const lowerInput = input.toLowerCase();
-        const words = lowerInput.split(/\s+/);
+        this.connections.push({
+            from: fromNode.id,
+            to: toNode.id
+        });
         
-        let elementsToCreate = [];
-        let connectionsToCreate = [];
-        
-        // Find materials
-        this.nlpKeywords.materials.forEach(keyword => {
-            if (lowerInput.includes(keyword)) {
-                elementsToCreate.push({ type: 'material', keyword });
-            }
-        });
-
-        // Find resources
-        this.nlpKeywords.resources.forEach(keyword => {
-            if (lowerInput.includes(keyword)) {
-                elementsToCreate.push({ type: 'resource', keyword });
-            }
-        });
-
-        // Find activities
-        this.nlpKeywords.activities.forEach(keyword => {
-            if (lowerInput.includes(keyword)) {
-                elementsToCreate.push({ type: 'activity', keyword });
-            }
-        });
-
-        // Find BOM activities
-        this.nlpKeywords.bom.forEach(keyword => {
-            if (lowerInput.includes(keyword)) {
-                elementsToCreate.push({ type: 'bom', keyword });
-            }
-        });
-
-        // Find distribution activities
-        this.nlpKeywords.distribution.forEach(keyword => {
-            if (lowerInput.includes(keyword)) {
-                elementsToCreate.push({ type: 'distribution', keyword });
-            }
-        });
-
-        // Create elements if found
-        if (elementsToCreate.length > 0) {
-            this.createElementsFromNLP(elementsToCreate);
-            this.updateStatus(`Generated ${elementsToCreate.length} elements from description`);
-        } else {
-            this.updateStatus('No recognizable elements found in description');
-        }
-
-        document.getElementById('nlpInput').value = '';
+        this.showStatus(`Connected ${fromNode.label} → ${toNode.label}`, 'success');
+        return true;
     }
-
-    createElementsFromNLP(elementsToCreate) {
-        const startX = 200;
-        const startY = 200;
-        const spacing = 120;
-        
-        elementsToCreate.forEach((elementData, index) => {
-            const x = startX + (index % 4) * spacing;
-            const y = startY + Math.floor(index / 4) * spacing;
+    
+    canConnect(nodeA, nodeB) {
+        return nodeA.type !== nodeB.type;
+    }
+    
+    getNodeAt(x, y) {
+        const nodeRadius = 30; // Increased hit area
+        return this.nodes.find(node => {
+            const dx = x - node.x;
+            const dy = y - node.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance <= nodeRadius;
+        });
+    }
+    
+    getConnectionAt(x, y) {
+        const threshold = 10;
+        return this.connections.find(conn => {
+            const fromNode = this.nodes.find(n => n.id === conn.from);
+            const toNode = this.nodes.find(n => n.id === conn.to);
+            if (!fromNode || !toNode) return false;
             
-            this.createElement(elementData.type, x, y);
+            const distance = this.distanceToLine(x, y, fromNode.x, fromNode.y, toNode.x, toNode.y);
+            return distance <= threshold;
         });
     }
-
-    handleKeyboard(e) {
-        if (e.key === 'Delete' && this.selectedElement) {
-            this.deleteElement(this.selectedElement);
+    
+    distanceToLine(px, py, x1, y1, x2, y2) {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+        
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        const param = lenSq !== 0 ? dot / lenSq : -1;
+        
+        let xx, yy;
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
         }
         
-        if (e.key === 'Escape') {
-            if (this.isConnecting) {
-                this.endConnection();
-            }
-            this.currentTool = null;
-            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-            this.canvasContainer.className = 'canvas-container';
+        const dx = px - xx;
+        const dy = py - yy;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    deleteNode(node) {
+        this.nodes = this.nodes.filter(n => n.id !== node.id);
+        this.connections = this.connections.filter(conn => 
+            conn.from !== node.id && conn.to !== node.id
+        );
+        this.selectedNode = null;
+        this.showStatus(`Deleted ${node.label}`, 'success');
+        this.draw();
+    }
+    
+    deleteConnection(connection) {
+        const fromNode = this.nodes.find(n => n.id === connection.from);
+        const toNode = this.nodes.find(n => n.id === connection.to);
+        this.connections = this.connections.filter(conn => conn !== connection);
+        this.showStatus(`Deleted connection ${fromNode?.label} → ${toNode?.label}`, 'success');
+        this.draw();
+    }
+    
+    showContextMenu(x, y) {
+        const menu = document.getElementById('contextMenu');
+        
+        // Ensure menu stays within viewport
+        const menuWidth = 180;
+        const menuHeight = 120;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        let menuX = x;
+        let menuY = y;
+        
+        if (x + menuWidth > viewportWidth) {
+            menuX = x - menuWidth;
+        }
+        if (y + menuHeight > viewportHeight) {
+            menuY = y - menuHeight;
+        }
+        
+        menu.style.left = menuX + 'px';
+        menu.style.top = menuY + 'px';
+        menu.classList.remove('hidden');
+        
+        // Update menu items based on node type
+        const materialItem = document.getElementById('addConnectedMaterial');
+        const activityItem = document.getElementById('addConnectedActivity');
+        
+        if (this.contextMenuNode) {
+            materialItem.style.display = this.contextMenuNode.type === 'activity' ? 'block' : 'none';
+            activityItem.style.display = this.contextMenuNode.type === 'material' ? 'block' : 'none';
         }
     }
-
-    updateStatus(message) {
-        this.statusText.textContent = message;
+    
+    hideContextMenu() {
+        const menu = document.getElementById('contextMenu');
+        if (!menu.classList.contains('hidden')) {
+            menu.classList.add('hidden');
+        }
+    }
+    
+    addConnectedMaterial() {
+        if (!this.contextMenuNode) return;
+        
+        const baseNode = this.contextMenuNode;
+        const newX = Math.min(baseNode.x + 150, this.canvas.width - 50);
+        const newY = baseNode.y;
+        
+        const newNode = this.addNode('material', newX, newY);
+        
+        if (baseNode.type === 'activity') {
+            this.createConnection(baseNode, newNode);
+        }
+        
+        this.hideContextMenu();
+    }
+    
+    addConnectedActivity() {
+        if (!this.contextMenuNode) return;
+        
+        const baseNode = this.contextMenuNode;
+        const newX = Math.min(baseNode.x + 150, this.canvas.width - 50);
+        const newY = baseNode.y;
+        
+        const newNode = this.addNode('activity', newX, newY);
+        
+        if (baseNode.type === 'material') {
+            this.createConnection(baseNode, newNode);
+        }
+        
+        this.hideContextMenu();
+    }
+    
+    editLabel() {
+        if (!this.contextMenuNode) return;
+        
+        const modal = document.getElementById('editModal');
+        const input = document.getElementById('editInput');
+        
+        input.value = this.contextMenuNode.label;
+        modal.classList.remove('hidden');
+        
+        // Focus and select text after a brief delay to ensure modal is visible
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 10);
+        
+        this.hideContextMenu();
+    }
+    
+    saveEdit() {
+        if (this.contextMenuNode) {
+            const newLabel = document.getElementById('editInput').value.trim();
+            if (newLabel) {
+                const oldLabel = this.contextMenuNode.label;
+                this.contextMenuNode.label = newLabel;
+                this.showStatus(`Renamed "${oldLabel}" to "${newLabel}"`, 'success');
+                this.draw();
+            }
+        }
+        this.cancelEdit();
+    }
+    
+    cancelEdit() {
+        const modal = document.getElementById('editModal');
+        modal.classList.add('hidden');
+    }
+    
+    deleteSelectedNode() {
+        if (this.contextMenuNode) {
+            this.deleteNode(this.contextMenuNode);
+        }
+        this.hideContextMenu();
+    }
+    
+    draw() {
+        // Clear canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Draw grid pattern
+        this.drawGrid();
+        
+        // Draw connections first (behind nodes)
+        this.drawConnections();
+        
+        // Draw nodes
+        this.drawNodes();
+    }
+    
+    drawGrid() {
+        this.ctx.save();
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        this.ctx.lineWidth = 1;
+        
+        const gridSize = 20;
+        
+        // Vertical lines
+        for (let x = 0; x <= this.canvas.width; x += gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.canvas.height);
+            this.ctx.stroke();
+        }
+        
+        // Horizontal lines
+        for (let y = 0; y <= this.canvas.height; y += gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.canvas.width, y);
+            this.ctx.stroke();
+        }
+        
+        this.ctx.restore();
+    }
+    
+    drawNodes() {
+        this.nodes.forEach(node => {
+            this.ctx.save();
+            
+            // Set colors based on type and state
+            const isSelected = this.selectedNode === node;
+            const isConnecting = this.connectingFrom === node;
+            
+            if (node.type === 'material') {
+                this.ctx.fillStyle = isSelected || isConnecting ? '#21808d' : '#1fb8cd';
+                this.ctx.strokeStyle = '#127681';
+            } else {
+                this.ctx.fillStyle = isSelected || isConnecting ? '#d45b3a' : '#ffc185';
+                this.ctx.strokeStyle = '#b4413c';
+            }
+            
+            this.ctx.lineWidth = isSelected || isConnecting ? 3 : 2;
+            
+            // Add selection highlight
+            if (isSelected || isConnecting) {
+                this.ctx.save();
+                this.ctx.shadowColor = this.ctx.fillStyle;
+                this.ctx.shadowBlur = 10;
+                this.ctx.shadowOffsetX = 0;
+                this.ctx.shadowOffsetY = 0;
+            }
+            
+            // Draw shape
+            this.ctx.beginPath();
+            if (node.shape === 'triangle') {
+                this.drawTriangle(node.x, node.y, 25);
+            } else {
+                this.drawCircle(node.x, node.y, 25);
+            }
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            if (isSelected || isConnecting) {
+                this.ctx.restore();
+            }
+            
+            // Draw label
+            this.ctx.fillStyle = '#13343b';
+            this.ctx.font = '12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            
+            // Simple text wrapping
+            const maxWidth = 100;
+            const words = node.label.split(' ');
+            const lines = [];
+            let currentLine = words[0] || '';
+            
+            for (let i = 1; i < words.length; i++) {
+                const testLine = currentLine + ' ' + words[i];
+                const metrics = this.ctx.measureText(testLine);
+                if (metrics.width > maxWidth) {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                } else {
+                    currentLine = testLine;
+                }
+            }
+            lines.push(currentLine);
+            
+            const lineHeight = 14;
+            const totalHeight = lines.length * lineHeight;
+            const startY = node.y + 40;
+            
+            lines.forEach((line, index) => {
+                this.ctx.fillText(line, node.x, startY + index * lineHeight);
+            });
+            
+            this.ctx.restore();
+        });
+    }
+    
+    drawConnections() {
+        this.connections.forEach(conn => {
+            const fromNode = this.nodes.find(n => n.id === conn.from);
+            const toNode = this.nodes.find(n => n.id === conn.to);
+            
+            if (fromNode && toNode) {
+                this.drawArrow(fromNode.x, fromNode.y, toNode.x, toNode.y);
+            }
+        });
+    }
+    
+    drawTriangle(x, y, size) {
+        const height = size * Math.sqrt(3) / 2;
+        this.ctx.moveTo(x, y - height / 2);
+        this.ctx.lineTo(x - size / 2, y + height / 2);
+        this.ctx.lineTo(x + size / 2, y + height / 2);
+        this.ctx.closePath();
+    }
+    
+    drawCircle(x, y, radius) {
+        this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    }
+    
+    drawArrow(fromX, fromY, toX, toY) {
+        const headLength = 12;
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        
+        // Adjust start and end points to node edges
+        const nodeRadius = 27;
+        const adjustedFromX = fromX + nodeRadius * Math.cos(angle);
+        const adjustedFromY = fromY + nodeRadius * Math.sin(angle);
+        const adjustedToX = toX - nodeRadius * Math.cos(angle);
+        const adjustedToY = toY - nodeRadius * Math.sin(angle);
+        
+        this.ctx.save();
+        this.ctx.strokeStyle = '#626c71';
+        this.ctx.lineWidth = 2;
+        
+        // Draw line
+        this.ctx.beginPath();
+        this.ctx.moveTo(adjustedFromX, adjustedFromY);
+        this.ctx.lineTo(adjustedToX, adjustedToY);
+        this.ctx.stroke();
+        
+        // Draw arrowhead
+        this.ctx.fillStyle = '#626c71';
+        this.ctx.beginPath();
+        this.ctx.moveTo(adjustedToX, adjustedToY);
+        this.ctx.lineTo(
+            adjustedToX - headLength * Math.cos(angle - Math.PI / 6),
+            adjustedToY - headLength * Math.sin(angle - Math.PI / 6)
+        );
+        this.ctx.lineTo(
+            adjustedToX - headLength * Math.cos(angle + Math.PI / 6),
+            adjustedToY - headLength * Math.sin(angle + Math.PI / 6)
+        );
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        this.ctx.restore();
+    }
+    
+    generateFromNL() {
+        const input = document.getElementById('nlInput').value.toLowerCase().trim();
+        if (!input) {
+            this.showStatus('Please enter a description first!', 'warning');
+            return;
+        }
+        
+        this.clear();
+        
+        // Parse natural language input
+        if (input.includes('two plants') && input.includes('distribution center')) {
+            this.generateTwoPlantsToDC();
+        } else if (input.includes('plant') && input.includes('warehouse')) {
+            this.generatePlantToWarehouse();
+        } else if (input.includes('supplier') && input.includes('manufacturer')) {
+            this.generateSupplierToManufacturer();
+        } else if (input.includes('factory') || input.includes('manufacturing')) {
+            this.generateManufacturingChain();
+        } else {
+            this.generateGenericChain();
+        }
+        
+        this.showStatus('Diagram generated from natural language!', 'success');
+        document.getElementById('nlInput').value = ''; // Clear input
+    }
+    
+    generateTwoPlantsToDC() {
+        // Create two plants
+        const plant1 = this.addNode('material', 100, 150, 'Item A @ Plant 1');
+        const plant2 = this.addNode('material', 100, 300, 'Item A @ Plant 2');
+        
+        // Create transportation
+        const truck1 = this.addNode('activity', 300, 150, 'Truck 1');
+        const truck2 = this.addNode('activity', 300, 300, 'Truck 2');
+        
+        // Create DC
+        const dc = this.addNode('material', 500, 225, 'Item A @ DC');
+        
+        // Create connections
+        this.createConnection(plant1, truck1);
+        this.createConnection(plant2, truck2);
+        this.createConnection(truck1, dc);
+        this.createConnection(truck2, dc);
+        
+        this.draw();
+    }
+    
+    generatePlantToWarehouse() {
+        const plant = this.addNode('material', 100, 200, 'Raw Materials @ Plant');
+        const manufacturing = this.addNode('activity', 250, 200, 'Manufacturing');
+        const finished = this.addNode('material', 400, 200, 'Finished Goods');
+        const shipping = this.addNode('activity', 550, 200, 'Shipping');
+        const warehouse = this.addNode('material', 700, 200, 'Warehouse');
+        
+        this.createConnection(plant, manufacturing);
+        this.createConnection(manufacturing, finished);
+        this.createConnection(finished, shipping);
+        this.createConnection(shipping, warehouse);
+        
+        this.draw();
+    }
+    
+    generateSupplierToManufacturer() {
+        const supplier = this.addNode('material', 100, 200, 'Supplier Materials');
+        const procurement = this.addNode('activity', 250, 200, 'Procurement');
+        const received = this.addNode('material', 400, 200, 'Received Goods');
+        const manufacturing = this.addNode('activity', 550, 200, 'Manufacturing');
+        const finished = this.addNode('material', 700, 200, 'Finished Product');
+        
+        this.createConnection(supplier, procurement);
+        this.createConnection(procurement, received);
+        this.createConnection(received, manufacturing);
+        this.createConnection(manufacturing, finished);
+        
+        this.draw();
+    }
+    
+    generateManufacturingChain() {
+        const rawMat = this.addNode('material', 100, 200, 'Raw Materials');
+        const processing = this.addNode('activity', 250, 200, 'Processing');
+        const wip = this.addNode('material', 400, 200, 'WIP Inventory');
+        const assembly = this.addNode('activity', 550, 200, 'Assembly');
+        const final = this.addNode('material', 700, 200, 'Final Products');
+        
+        this.createConnection(rawMat, processing);
+        this.createConnection(processing, wip);
+        this.createConnection(wip, assembly);
+        this.createConnection(assembly, final);
+        
+        this.draw();
+    }
+    
+    generateGenericChain() {
+        const input = this.addNode('material', 150, 200, 'Input Materials');
+        const process = this.addNode('activity', 350, 200, 'Processing');
+        const output = this.addNode('material', 550, 200, 'Output Products');
+        
+        this.createConnection(input, process);
+        this.createConnection(process, output);
+        
+        this.draw();
+    }
+    
+    loadExample() {
+        // CRITICAL FIX: Properly clear and reset before loading
+        this.nodes = [];
+        this.connections = [];
+        this.selectedNode = null;
+        this.connectingFrom = null;
+        this.contextMenuNode = null;
+        this.isDragging = false;
+        this.nodeCounter = 0;
+        
+        // Load sample data with proper node structure
+        this.sampleData.nodes.forEach(nodeData => {
+            const node = {
+                id: nodeData.id,
+                type: nodeData.type,
+                shape: nodeData.shape,
+                label: nodeData.label,
+                x: nodeData.x,
+                y: nodeData.y
+            };
+            this.nodes.push(node);
+            this.nodeCounter++;
+        });
+        
+        // Load connections
+        this.connections = [...this.sampleData.connections];
+        
+        this.updateCanvasCursor();
+        this.updateDragStatus('Ready');
+        this.draw();
+        this.showStatus('Sample supply chain loaded!', 'success');
+    }
+    
+    clear() {
+        // CRITICAL FIX: Properly clear all state
+        this.nodes = [];
+        this.connections = [];
+        this.selectedNode = null;
+        this.connectingFrom = null;
+        this.contextMenuNode = null;
+        this.nodeCounter = 0;
+        this.isDragging = false;
+        this.hideContextMenu();
+        this.cancelEdit();
+        this.updateDragStatus('Ready');
+        this.updateCanvasCursor();
+        this.draw();
+        this.showStatus('Canvas cleared!', 'info');
+    }
+    
+    save() {
+        const data = {
+            nodes: this.nodes,
+            connections: this.connections,
+            timestamp: new Date().toISOString(),
+            version: '2.0'
+        };
+        
+        const dataStr = JSON.stringify(data, null, 2);
+        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        
+        const exportFileDefaultName = `supply-chain-diagram-${new Date().toISOString().split('T')[0]}.json`;
+        
+        const linkElement = document.createElement('a');
+        linkElement.setAttribute('href', dataUri);
+        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.click();
+        
+        this.showStatus('Diagram saved as JSON file!', 'success');
+    }
+    
+    load() {
+        document.getElementById('fileInput').click();
+    }
+    
+    handleFileLoad(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                this.nodes = data.nodes || [];
+                this.connections = data.connections || [];
+                this.nodeCounter = this.nodes.length;
+                this.selectedNode = null;
+                this.connectingFrom = null;
+                this.draw();
+                this.showStatus('Diagram loaded from file!', 'success');
+            } catch (error) {
+                this.showStatus('Error loading file! Please check file format.', 'error');
+            }
+        };
+        reader.readAsText(file);
+        
+        // Reset file input
+        e.target.value = '';
+    }
+    
+    exportPNG() {
+        // Create download link
+        const link = document.createElement('a');
+        link.download = `supply-chain-diagram-${new Date().toISOString().split('T')[0]}.png`;
+        link.href = this.canvas.toDataURL('image/png');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        this.showStatus('Diagram exported as PNG!', 'success');
+    }
+    
+    showStatus(message, type = 'info') {
+        const statusText = document.getElementById('statusText');
+        const originalClass = statusText.className;
+        
+        statusText.textContent = message;
+        statusText.className = `status-${type}`;
+        
+        // Reset status after 4 seconds
+        setTimeout(() => {
+            this.updateStatusText();
+            statusText.className = originalClass;
+        }, 4000);
     }
 }
 
-// Initialize the application
+// Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    new VisionApp();
+    window.supplyChainCanvas = new SupplyChainCanvas();
 });

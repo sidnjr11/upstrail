@@ -3,136 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vision - Supply Chain Diagram Tool</title>
+    <title>Supply Chain Canvas - Fixed Drag & Drop</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app">
-        <!-- Header -->
+    <div class="app-container">
+        <!-- Top Menu Bar -->
         <header class="header">
             <div class="header-content">
-                <h1 class="app-title">Vision</h1>
-                <div class="toolbar">
-                    <!-- Element Tools -->
-                    <div class="tool-group">
-                        <button class="tool-btn" data-tool="material" title="Add Material (Triangle)">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <polygon points="10,2 18,16 2,16" fill="#4CAF50" stroke="#000" stroke-width="1"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="resource" title="Add Resource (Inverted Triangle)">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <polygon points="2,4 18,4 10,18" fill="#2196F3" stroke="#000" stroke-width="1"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="activity" title="Add Activity (Circle)">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <circle cx="10" cy="10" r="8" fill="#FF9800" stroke="#000" stroke-width="1"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="bom" title="Add BOM Activity (Gear)">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <g fill="#9C27B0" stroke="#000" stroke-width="1">
-                                    <path d="M10,2 L12,6 L16,6 L13,9 L14,14 L10,12 L6,14 L7,9 L4,6 L8,6 Z"/>
-                                </g>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="distribution" title="Add Distribution Activity (Truck)">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <g fill="#F44336" stroke="#000" stroke-width="1">
-                                    <rect x="2" y="8" width="10" height="6"/>
-                                    <rect x="12" y="10" width="4" height="4"/>
-                                    <circle cx="5" cy="16" r="2"/>
-                                    <circle cx="15" cy="16" r="2"/>
-                                </g>
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- Action Tools -->
-                    <div class="tool-group">
-                        <button class="tool-btn" data-tool="connect" title="Connect Elements">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <path d="M2,10 L18,10 M14,6 L18,10 L14,14" fill="none" stroke="#000" stroke-width="2"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="delete" title="Delete Element">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <path d="M6,2 L14,2 M4,6 L16,6 M6,6 L6,16 L14,16 L14,6 M8,8 L8,14 M12,8 L12,14" fill="none" stroke="#F44336" stroke-width="2"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" id="clearCanvas" title="Clear Canvas">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <circle cx="10" cy="10" r="8" fill="none" stroke="#F44336" stroke-width="2"/>
-                                <path d="M6,6 L14,14 M14,6 L6,14" stroke="#F44336" stroke-width="2"/>
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- Zoom Tools -->
-                    <div class="tool-group">
-                        <button class="tool-btn" id="zoomIn" title="Zoom In">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <circle cx="9" cy="9" r="6" fill="none" stroke="#000" stroke-width="2"/>
-                                <path d="15,15 L19,19 M9,6 L9,12 M6,9 L12,9" stroke="#000" stroke-width="2"/>
-                            </svg>
-                        </button>
-                        <button class="tool-btn" id="zoomOut" title="Zoom Out">
-                            <svg width="20" height="20" viewBox="0 0 20 20">
-                                <circle cx="9" cy="9" r="6" fill="none" stroke="#000" stroke-width="2"/>
-                                <path d="15,15 L19,19 M6,9 L12,9" stroke="#000" stroke-width="2"/>
-                            </svg>
-                        </button>
-                        <span class="zoom-level" id="zoomLevel">100%</span>
-                    </div>
-
-                    <!-- NLP Input -->
-                    <div class="nlp-group">
-                        <input type="text" id="nlpInput" class="form-control nlp-input" placeholder="Describe your supply chain...">
-                        <button class="btn btn--primary" id="generateBtn">Generate</button>
-                    </div>
+                <h1 class="header-title">Supply Chain Canvas</h1>
+                <div class="header-actions">
+                    <button class="btn btn--outline btn--sm" id="saveBtn">Save</button>
+                    <button class="btn btn--outline btn--sm" id="loadBtn">Load</button>
+                    <button class="btn btn--outline btn--sm" id="exportBtn">Export PNG</button>
+                    <button class="btn btn--secondary btn--sm" id="clearBtn">Clear All</button>
                 </div>
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="canvas-container" id="canvasContainer">
-                <svg id="canvas" width="2400" height="1600" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Grid Pattern -->
-                    <defs>
-                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="1" opacity="0.3"/>
-                        </pattern>
-                        <!-- Arrow Marker -->
-                        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
-                                refX="9" refY="3.5" orient="auto">
-                            <polygon points="0 0, 10 3.5, 0 7" fill="#000"/>
-                        </marker>
-                    </defs>
-                    
-                    <!-- Grid Background -->
-                    <rect width="100%" height="100%" fill="url(#grid)"/>
-                    
-                    <!-- Connections Layer -->
-                    <g id="connectionsLayer"></g>
-                    
-                    <!-- Elements Layer -->
-                    <g id="elementsLayer"></g>
-                    
-                    <!-- Temporary Connection Line -->
-                    <line id="tempConnection" x1="0" y1="0" x2="0" y2="0" 
-                          stroke="#000" stroke-width="2" marker-end="url(#arrowhead)" 
-                          style="display: none"/>
-                </svg>
-            </div>
-        </main>
+        <div class="main-content">
+            <!-- Left Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Tools</h3>
+                    <div class="tool-grid">
+                        <button class="tool-btn active" id="selectTool" data-tool="select">
+                            <div class="tool-icon">⭰</div>
+                            <span>Select</span>
+                        </button>
+                        <button class="tool-btn" id="materialTool" data-tool="material">
+                            <div class="tool-icon">▲</div>
+                            <span>Material</span>
+                        </button>
+                        <button class="tool-btn" id="activityTool" data-tool="activity">
+                            <div class="tool-icon">●</div>
+                            <span>Activity</span>
+                        </button>
+                        <button class="tool-btn" id="connectTool" data-tool="connect">
+                            <div class="tool-icon">→</div>
+                            <span>Connect</span>
+                        </button>
+                        <button class="tool-btn" id="deleteTool" data-tool="delete">
+                            <div class="tool-icon">✕</div>
+                            <span>Delete</span>
+                        </button>
+                    </div>
+                </div>
 
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <span id="statusText">Ready - Select a tool to start creating your supply chain diagram</span>
+                <div class="sidebar-section">
+                    <h3>Natural Language</h3>
+                    <textarea 
+                        id="nlInput" 
+                        placeholder="Describe your supply chain... e.g., 'Create a network where two plants supply item A to one distribution center'"
+                        class="form-control nl-input"
+                    ></textarea>
+                    <button class="btn btn--primary btn--sm btn--full-width" id="generateBtn">Generate Diagram</button>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Connection Rules</h3>
+                    <div class="rules-list">
+                        <div class="rule-item valid">✓ Material → Activity</div>
+                        <div class="rule-item valid">✓ Activity → Material</div>
+                        <div class="rule-item invalid">✕ Material → Material</div>
+                        <div class="rule-item invalid">✕ Activity → Activity</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Examples</h3>
+                    <button class="btn btn--outline btn--sm btn--full-width" id="loadExampleBtn">Load Sample Chain</button>
+                </div>
+
+                <div class="sidebar-section debug-info">
+                    <h3>Debug Info</h3>
+                    <div class="debug-item">
+                        <small>Mouse: <span id="mouseCoords">-</span></small>
+                    </div>
+                    <div class="debug-item">
+                        <small>Canvas: <span id="canvasSize">800×600</span></small>
+                    </div>
+                    <div class="debug-item">
+                        <small>Status: <span id="dragStatus">Ready</span></small>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Canvas Area -->
+            <main class="canvas-container">
+                <div class="canvas-wrapper">
+                    <canvas id="canvas" width="800" height="600"></canvas>
+                </div>
+                <div class="status-bar">
+                    <span id="statusText">Click and drag to move nodes. Right-click for context menu. Double-click to edit labels.</span>
+                </div>
+            </main>
         </div>
     </div>
+
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu hidden">
+        <div class="context-menu-item" id="addConnectedMaterial">Add Connected Material</div>
+        <div class="context-menu-item" id="addConnectedActivity">Add Connected Activity</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" id="editLabel">Edit Label</div>
+        <div class="context-menu-item" id="deleteNode">Delete Node</div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Edit Node Label</h3>
+            <input type="text" id="editInput" class="form-control" placeholder="Enter new label">
+            <div class="modal-actions">
+                <button class="btn btn--primary" id="saveEditBtn">Save</button>
+                <button class="btn btn--outline" id="cancelEditBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load File Input -->
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
 
     <script src="app.js"></script>
 </body>
