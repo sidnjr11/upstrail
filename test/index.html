@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SupplyChain Canvas — Upstrail-lite</title>
+
+  <!-- Konva for canvas shapes -->
+  <script src="https://unpkg.com/konva@8/konva.min.js"></script>
+
+  <style>
+    :root{
+      --toolbar-bg:#0b1220;
+      --panel-bg:#0f1724;
+      --accent:#06b6d4;
+      --muted:#9ca3af;
+    }
+    html,body{height:100%;margin:0;font-family:Inter, Roboto, Arial, sans-serif;background:#071023;color:#e6edf3}
+    .app {
+      display:grid;
+      grid-template-columns:320px 1fr 360px;
+      gap:12px;
+      height:100vh;
+      padding:12px;
+      box-sizing:border-box;
+    }
+    .panel {
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:10px;
+      padding:12px;
+      box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+      overflow:auto;
+    }
+    .left {min-width:320px}
+    .center {position:relative}
+    .right {min-width:360px}
+    h3{margin:6px 0 10px 0;font-weight:600}
+    button, .btn{
+      background:var(--accent);
+      border:none;
+      color:#02121a;
+      padding:8px 12px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:600;
+      margin:6px 6px 6px 0;
+    }
+    .muted{color:var(--muted);font-size:13px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+    #container{background:#071426;border-radius:8px;height:77vh;box-shadow:inset 0 0 0 1px rgba(255,255,255,0.01)}
+    label{display:block;margin-top:8px;font-size:13px}
+    input[type="text"], textarea {
+      width:100%;
+      padding:8px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,0.06);
+      background:transparent;color:inherit;
+      box-sizing:border-box;margin-top:6px;
+    }
+    .small{font-size:13px;padding:6px 8px}
+    .context-menu{
+      position:absolute;
+      background:#06101a;
+      border:1px solid rgba(255,255,255,0.04);
+      padding:6px;
+      border-radius:8px;
+      z-index:999;
+      display:none;
+      min-width:180px;
+    }
+    .context-menu button{display:block;width:100%;text-align:left;background:transparent;color:var(--accent);border:none;padding:8px;border-radius:6px}
+    .node-legend{display:flex;gap:8px;align-items:center}
+    .legend-box{display:flex;gap:8px;align-items:center}
+    .muted-small{color:var(--muted);font-size:12px}
+    .nl-row{display:flex;gap:8px}
+    .nl-row input{flex:1}
+    .footer-note{font-size:12px;color:var(--muted);margin-top:10px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel left">
+      <h3>Tools</h3>
+      <div class="toolbar">
+        <button id="addMaterial">Add Material (Triangle)</button>
+        <button id="addActivity">Add Activity (Circle)</button>
+        <button id="connectMode" class="small">Connect: Click src → dst</button>
+        <button id="exportPNG" class="small">Export PNG</button>
+        <button id="exportJSON" class="small">Export JSON</button>
+        <button id="importJSON" class="small">Import JSON</button>
+        <button id="undo" class="small">Undo</button>
+        <button id="clear" class="small">Clear</button>
+      </div>
+
+      <div>
+        <h3>Quick help</h3>
+        <p class="muted">
+          - Triangles = materials (e.g., Item A @ Plant)<br>
+          - Circles = activities (e.g., Truck, BOM)<br>
+          - Material &lt;--&gt; Activity allowed only (no material→material, no activity→activity).<br>
+          - Right-click a node to add connected node quickly.<br>
+          - Double-click node label to rename (uses a prompt).
+        </p>
+      </div>
+
+      <div style="margin-top:12px;">
+        <h3>Natural-language</h3>
+        <div class="nl-row">
+          <input id="nlInput" placeholder='e.g. "create a network where one distribution center is being supplied item A by two plants"' />
+          <button id="nlGo">Create</button>
+        </div>
+        <p class="muted-small">This is rule-based, runs in-browser (free). Works best with phrases like "X supplied by Y plants", "one DC supplied by two plants", "Item A moved from plant to DC".</p>
+      </div>
+
+      <div style="margin-top:12px;">
+        <h3>Save / Load</h3>
+        <button id="saveLocal">Save to browser</button>
+        <button id="loadLocal">Load from browser</button>
+        <p class="muted-small">Saved diagrams are stored in your browser only (localStorage).</p>
+      </div>
+
+      <div style="margin-top:12px;">
+        <h3>Legend</h3>
+        <div class="node-legend">
+          <div class="legend-box"><div style="width:26px;height:26px;clip-path:polygon(50% 0%,0% 100%,100% 100%);background:#06b6d4;border-radius:2px"></div><div class="muted-small">Material</div></div>
+          <div class="legend-box"><div style="width:26px;height:26px;border-radius:50%;background:#34d399"></div><div class="muted-small">Activity</div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="panel center">
+      <h3>Canvas</h3>
+      <div id="container"></div>
+
+      <!-- Right-click context menu -->
+      <div id="ctxMenu" class="context-menu"></div>
+    </div>
+
+    <div class="panel right">
+      <h3>JSON / Export</h3>
+      <label>Canvas JSON</label>
+      <textarea id="jsonOut" rows="12" readonly></textarea>
+      <label>Import JSON (paste then press Import)</label>
+      <textarea id="jsonIn" rows="8"></textarea>
+      <div style="margin-top:8px;">
+        <button id="importFromField">Import</button>
+      </div>
+
+      <div style="margin-top:12px;">
+        <h3>About</h3>
+        <p class="muted">This file is designed to be self-contained and run entirely in the browser. You can copy the HTML to GitHub Pages as `index.html` to host it for free.</p>
+        <p class="footer-note">Tip: Keep labels short (FG, RM, BOM). The NL parser is intentionally small and safe (no external APIs).</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // === SupplyChain Canvas - Client-only implementation using Konva ===
+  // Notes:
+  // - Node types: material, activity
+  // - Triangles = materials (Konva.RegularPolygon sides=3)
+  // - Circles = activities (Konva.Circle)
+  // - Connections stored as objects {id, from, to, arrowKonvaObject}
+  // - This script is designed to be simple and self-contained.
+
+  // Utilities
+  const uid = (prefix='id') => prefix + '-' + Math.random().toString(36).slice(2,9);
+  const STORAGE_KEY = 'upstrail_canvas_v1';
+
+  // Konva setup
+  const width = window.innerWidth - 760;
+  const height = window.innerHeight - 140;
+  const stage = new Konva.Stage({ container: 'container', width: width, height: height });
+  const layer = new Konva.Layer();
+  stage.add(layer);
+
+  // For arrows, use separate layer to keep under nodes
+  const arrowLayer = new Konva.Layer();
+  stage.add(arrowLayer);
+
+  // Model
+  const nodes = {}; // id -> { id, type, label, x, y, group }
+  const connections = {}; // id -> { id, from, to, arrow }
+
+  // State
+  let connectMode = false;
+  let connectSource = null;
+  let lastStateJSON = null; // for basic undo
+  let contextTargetNode = null;
+
+  // Visual constants
+  const MATERIAL_COLOR = '#06b6d4'; // triangle
+  const ACTIVITY_COLOR = '#34d399'; // circle
+  const SELECT_STROKE = '#ffd54f';
+
+  // Helpers: create node group with shape + label
+  function createNode(type, x=100, y=100, label=null) {
+    const id = uid(type);
+    const defaultLabel = label || (type === 'material' ? 'Material' : 'Activity');
+    const group = new Konva.Group({ x, y, draggable: true, id });
+
+    // shape
+    let shape;
+    if (type === 'material') {
+      shape = new Konva.RegularPolygon({
+        sides: 3,
+        radius: 28,
+        fill: MATERIAL_COLOR,
+        offset: { x: 0, y: 0 },
+        rotation: 0,
+        stroke: '#012a30',
+        strokeWidth: 2,
+      });
+      // make triangle point up (default RegularPolygon triangle points up)
+    } else {
+      shape = new Konva.Circle({
+        radius: 22,
+        fill: ACTIVITY_COLOR,
+        stroke: '#053826',
+        strokeWidth: 2,
+      });
+    }
+
+    // label
+    const text = new Konva.Text({
+      text: defaultLabel,
+      fontSize: 13,
+      fontFamily: 'Inter, Arial',
+      padding: 6,
+      fill: '#02121a',
+      width: 120,
+      align: 'center',
+      // background simulated via rect behind? we will use text with bg by adding rect if needed
+    });
+
+    // bg rect behind text for readability
+    const bg = new Konva.Rect({
+      width: text.width(),
+      height: text.height(),
+      offsetX: text.width()/2,
+      offsetY: -40,
+      x: 0,
+      y: 0,
+      fill: 'rgba(255,255,255,0.06)',
+      cornerRadius: 6
+    });
+
+    // center shapes and labels
+    group.add(shape);
+    // position text under/above shape depending on desired layout
+    text.offsetX(text.width()/2);
+    text.offsetY(text.height()/2);
+    text.y(40);
+    text.x(0);
+
+    // place text centered; to avoid large blocking, we'll allow clicking on label separately
+    group.add(text);
+
+    // store node
+    nodes[id] = {
+      id,
+      type,
+      label: defaultLabel,
+      x,
+      y,
+      group,
+      shape,
+      text
+    };
+
+    // event handlers
+    group.on('dragmove', onGroupDrag);
+    group.on('dragend', saveState);
+    group.on('click', (e) => onNodeClick(e, id));
+    group.on('dblclick', (e)=> renameNode(id));
+    group.on('contextmenu', (e)=> {
+      e.evt.preventDefault();
+      showContextMenu(e.evt.clientX, e.evt.clientY, id);
+    });
+
+    // Double-click on text also triggers rename
+    text.on('dblclick', ()=>renameNode(id));
+    shape.on('dblclick', ()=>renameNode(id));
+
+    // Cursor changes
+    group.on('mouseover', ()=> {
+      document.body.style.cursor='grab';
+    });
+    group.on('mouseout', ()=> {
+      document.body.style.cursor='default';
+    });
+
+    // center group offsets
+    group.offsetX(0);
+    group.offsetY(0);
+    group.x(x); group.y(y);
+
+    layer.add(group);
+    layer.draw();
+    return id;
+  }
+
+  function onGroupDrag(e) {
+    const g = e.target.getParent ? e.target.getParent() : e.target;
+    const id = g.id();
+    // update model coordinates
+    nodes[id].x = g.x();
+    nodes[id].y = g.y();
+    // update connected arrows
+    updateArrowsForNode(id);
+    layer.batchDraw();
+    arrowLayer.batchDraw();
+  }
+
+  function renameNode(id) {
+    const n = nodes[id];
+    if (!n) return;
+    const newLabel = prompt('Rename node label:', n.label);
+    if (newLabel === null) return;
+    n.label = newLabel.trim() || n.label;
+    n.text.text(n.label);
+    updateTextBg(n);
+    layer.draw();
+    saveState();
+  }
+
+  function updateTextBg(n) {
+    // adjust bg if present - we used no separate bg now but adjust width
+    n.text.width(Math.max(60, n.text.text().length * 7));
+    n.text.offsetX(n.text.width()/2);
+    n.text.offsetY(n.text.height()/2);
+  }
+
+  // Connect nodes (validate rules)
+  function canConnect(srcId, dstId) {
+    if (!srcId || !dstId || srcId===dstId) return false;
+    const s = nodes[srcId].type;
+    const d = nodes[dstId].type;
+    // allow only material -> activity or activity -> material
+    if (s === d) return false;
+    return true;
+  }
+
+  function createConnection(fromId, toId) {
+    if (!canConnect(fromId, toId)) {
+      alert('Invalid connection: only Material↔Activity allowed.');
+      return null;
+    }
+    const id = uid('conn');
+    const arrow = new Konva.Arrow({
+      points: getArrowPoints(fromId, toId),
+      pointerLength: 8,
+      pointerWidth: 8,
+      fill: '#ffffff',
+      stroke: '#ffffff',
+      strokeWidth: 2,
+      opacity: 0.85,
+      id
+    });
+    arrow.on('click', ()=> {
+      if (confirm('Delete this connection?')) {
+        deleteConnection(id);
+      }
+    });
+
+    arrowLayer.add(arrow);
+    arrowLayer.draw();
+    connections[id] = { id, from: fromId, to: toId, arrow };
+    saveState();
+    return id;
+  }
+
+  function getArrowPoints(fromId, toId) {
+    const a = nodes[fromId].group.getClientRect();
+    const b = nodes[toId].group.getClientRect();
+    const from = { x: nodes[fromId].x, y: nodes[fromId].y };
+    const to = { x: nodes[toId].x, y: nodes[toId].y };
+    return [from.x, from.y, to.x, to.y];
+  }
+
+  function updateArrowsForNode(nodeId) {
+    Object.values(connections).forEach(c => {
+      if (c.from === nodeId || c.to === nodeId) {
+        c.arrow.points(getArrowPoints(c.from, c.to));
+      }
+    });
+    arrowLayer.batchDraw();
+  }
+
+  function deleteConnection(connId) {
+    const c = connections[connId];
+    if (!c) return;
+    c.arrow.destroy();
+    delete connections[connId];
+    arrowLayer.draw();
+    saveState();
+  }
+
+  // click handling for creating connections
+  function onNodeClick(e, id) {
+    if (!connectMode) return;
+    if (!connectSource) {
+      connectSource = id;
+      highlightNode(id, true);
+      return;
+    }
+    const target = id;
+    if (connectSource) {
+      // try create connection
+      if (canConnect(connectSource, target)) {
+        createConnection(connectSource, target);
+      } else {
+        alert('Invalid connection (only Material <-> Activity).');
+      }
+      highlightNode(connectSource, false);
+      connectSource = null;
+    }
+  }
+
+  function highlightNode(id, highlight) {
+    const n = nodes[id];
+    if (!n) return;
+    if (highlight) {
+      n.shape.stroke(SELECT_STROKE);
+      n.shape.strokeWidth(4);
+    } else {
+      n.shape.strokeWidth(2);
+      n.shape.stroke(n.type === 'material' ? '#012a30' : '#053826');
+    }
+    layer.draw();
+  }
+
+  // Right-click context menu creation
+  const ctxMenu = document.getElementById('ctxMenu');
+  function showContextMenu(x,y,nodeId) {
+    contextTargetNode = nodeId;
+    ctxMenu.innerHTML = '';
+    const n = nodes[nodeId];
+    if (!n) return;
+    // Option: Add connected node
+    const btnAddConnected = document.createElement('button');
+    btnAddConnected.innerText = n.type === 'material' ? 'Add connected Activity (circle)' : 'Add connected Material (triangle)';
+    btnAddConnected.onclick = () => {
+      const newType = (n.type === 'material') ? 'activity' : 'material';
+      const newId = createNode(newType, n.x + 140, n.y);
+      // create connection from/to based on rule (material->activity or activity->material)
+      if (n.type === 'material') {
+        // material -> activity
+        createConnection(nodeId, newId);
+      } else {
+        // activity -> material
+        createConnection(nodeId, newId);
+      }
+      hideContextMenu();
+      saveState();
+    };
+    ctxMenu.appendChild(btnAddConnected);
+
+    // Rename
+    const btnRename = document.createElement('button');
+    btnRename.innerText = 'Rename node';
+    btnRename.onclick = ()=> { renameNode(nodeId); hideContextMenu(); };
+    ctxMenu.appendChild(btnRename);
+
+    // Delete
+    const btnDelete = document.createElement('button');
+    btnDelete.innerText = 'Delete node';
+    btnDelete.onclick = ()=> {
+      if (confirm('Delete node and all connected arrows?')) {
+        deleteNode(nodeId);
+      }
+      hideContextMenu();
+    };
+    ctxMenu.appendChild(btnDelete);
+
+    // Show at mouse
+    ctxMenu.style.left = x + 'px';
+    ctxMenu.style.top = y + 'px';
+    ctxMenu.style.display = 'block';
+  }
+  function hideContextMenu(){ ctxMenu.style.display='none'; contextTargetNode=null; }
+
+  // Delete node and its connections
+  function deleteNode(id) {
+    if (!nodes[id]) return;
+    // remove connections
+    Object.values(connections).forEach(c => {
+      if (c.from === id || c.to === id) {
+        c.arrow.destroy();
+        delete connections[c.id];
+      }
+    });
+    // remove group
+    nodes[id].group.destroy();
+    delete nodes[id];
+    layer.draw();
+    arrowLayer.draw();
+    saveState();
+  }
+
+  // Save/load state (JSON)
+  function exportJSON() {
+    // Build serializable model
+    const nodeList = Object.values(nodes).map(n => ({
+      id: n.id,
+      type: n.type,
+      label: n.label,
+      x: n.x,
+      y: n.y
+    }));
+    const connList = Object.values(connections).map(c => ({ id: c.id, from: c.from, to: c.to }));
+    return JSON.stringify({ nodes: nodeList, connections: connList }, null, 2);
+  }
+
+  function importJSON(json) {
+    try {
+      const data = typeof json === 'string' ? JSON.parse(json) : json;
+      // clear canvas
+      clearAll(false);
+      // create nodes
+      if (Array.isArray(data.nodes)) {
+        data.nodes.forEach(n => {
+          const id = createNode(n.type, n.x || 120, n.y || 120, n.label || (n.type==='material'?'Material':'Activity'));
+          // if original had id, keep mapping (we won't attempt to preserve original ids for simplicity)
+        });
+      }
+      // create connections by matching closest nodes by label & type? Simpler: use given indices if they match created ones.
+      // We'll attempt to map by label+type first (best-effort)
+      const map = {};
+      Object.values(nodes).forEach(n => { map[n.type + '::' + n.label] = n.id; });
+      if (Array.isArray(data.connections)) {
+        data.connections.forEach(c => {
+          const fromKey = (data.nodes.find(x=>x.id===c.from) || {}).type + '::' + ((data.nodes.find(x=>x.id===c.from)||{}).label);
+          const toKey = (data.nodes.find(x=>x.id===c.to) || {}).type + '::' + ((data.nodes.find(x=>x.id===c.to)||{}).label);
+          const fromId = map[fromKey];
+          const toId = map[toKey];
+          if (fromId && toId && canConnect(fromId,toId)) {
+            createConnection(fromId,toId);
+          }
+        });
+      }
+      layer.draw(); arrowLayer.draw(); saveState();
+    } catch (err) {
+      alert('Invalid JSON');
+      console.error(err);
+    }
+  }
+
+  // Clear everything
+  function clearAll(confirmBefore=true) {
+    if (confirmBefore && !confirm('Clear canvas? This removes all nodes and connections.')) return;
+    Object.keys(connections).forEach(id => { connections[id].arrow.destroy(); });
+    Object.keys(nodes).forEach(id => { nodes[id].group.destroy(); });
+    Object.keys(connections).forEach(k=>delete connections[k]);
+    Object.keys(nodes).forEach(k=>delete nodes[k]);
+    layer.draw(); arrowLayer.draw();
+    saveState();
+  }
+
+  // Save to localStorage
+  function saveLocal() {
+    const json = exportJSON();
+    localStorage.setItem(STORAGE_KEY, json);
+    alert('Saved to browser localStorage.');
+  }
+  function loadLocal() {
+    const json = localStorage.getItem(STORAGE_KEY);
+    if (!json) { alert('No saved canvas found in browser.'); return; }
+    importJSON(json);
+  }
+
+  // Export PNG
+  function exportPNG() {
+    // remove selection highlights (not persistent for now)
+    stage.toDataURL({
+      callback: (dataUrl) => {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = 'supplychain-diagram.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    });
+  }
+
+  // Basic undo (one state)
+  function saveState() {
+    try {
+      lastStateJSON = exportJSON();
+      document.getElementById('jsonOut').value = lastStateJSON;
+    } catch(e) {}
+  }
+  function undo() {
+    if (!lastStateJSON) { alert('Nothing to undo'); return; }
+    importJSON(lastStateJSON);
+  }
+
+  // keep context menu hidden on click outside
+  window.addEventListener('click', (e)=> { if (ctxMenu.style.display==='block') hideContextMenu(); });
+
+  // UI wiring
+  document.getElementById('addMaterial').addEventListener('click', ()=> { createNode('material', 120 + Math.random()*200, 120 + Math.random()*200); saveState(); });
+  document.getElementById('addActivity').addEventListener('click', ()=> { createNode('activity', 220 + Math.random()*200, 120 + Math.random()*200); saveState(); });
+
+  document.getElementById('connectMode').addEventListener('click', (e) => {
+    connectMode = !connectMode;
+    connectSource = null;
+    e.target.style.background = connectMode ? '#fbbf24' : 'var(--accent)';
+    e.target.innerText = connectMode ? 'Connect: ON (click src→dst)' : 'Connect: Click src → dst';
+  });
+
+  document.getElementById('exportPNG').addEventListener('click', exportPNG);
+  document.getElementById('exportJSON').addEventListener('click', ()=> {
+    const j = exportJSON();
+    document.getElementById('jsonOut').value = j;
+    // download
+    const blob = new Blob([j], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'supplychain-diagram.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('importJSON').addEventListener('click', ()=> {
+    document.getElementById('jsonIn').focus();
+  });
+  document.getElementById('importFromField').addEventListener('click', ()=> {
+    const j = document.getElementById('jsonIn').value;
+    if (!j) { alert('Paste JSON into the field to import'); return; }
+    importJSON(j);
+  });
+
+  document.getElementById('saveLocal').addEventListener('click', saveLocal);
+  document.getElementById('loadLocal').addEventListener('click', loadLocal);
+  document.getElementById('undo').addEventListener('click', undo);
+  document.getElementById('clear').addEventListener('click', ()=> clearAll(true));
+
+  // also show JSON automatically
+  setInterval(()=> {
+    document.getElementById('jsonOut').value = exportJSON();
+  }, 3000);
+
+  // Delete context menu on Esc
+  window.addEventListener('keydown', (e)=> { if (e.key === 'Escape') hideContextMenu(); });
+
+  // Natural language parser (rule-based, intentionally small & safe)
+  // Accepts commands like:
+  // - "create a network where one distribution center is being supplied item A by two plants"
+  // - "create network: one DC supplied by 2 plants with item A"
+  // - "make 2 plants supply item B to one DC"
+  // It will:
+  //  - detect number of plants (default 2 if "two" or digits)
+  //  - detect item name (Item A, item B, or "item a")
+  //  - detect "supplied" => activity 'Truck'
+  //  - create the materials and activity nodes and connect them
+  function nlParseAndCreate(text) {
+    text = text.toLowerCase();
+    // defaults
+    let nPlants = 2;
+    const numMatch = text.match(/(\b\d+\b)|\b(one|two|three|four|five)\b/);
+    if (numMatch) {
+      const numText = numMatch[0];
+      const wordsToNum = { one:1, two:2, three:3, four:4, five:5 };
+      nPlants = wordsToNum[numText] || (parseInt(numText) || nPlants);
+    }
+    // find item e.g., "item a" or "item a at plant"
+    let itemMatch = text.match(/item\s+([a-z0-9]+)/) || text.match(/\b([A-Z]|[a-z])\b(?=\s+item)/i);
+    let itemName = 'ItemA';
+    if (itemMatch && itemMatch[1]) {
+      itemName = itemMatch[1].toUpperCase();
+      if (itemName.length === 1) itemName = 'Item ' + itemName;
+    } else {
+      // try words like 'item a' with space
+      const alt = text.match(/item\s+([a-z])/);
+      if (alt && alt[1]) itemName = 'Item ' + alt[1].toUpperCase();
+    }
+
+    // detect target 'distribution center' or 'dc'
+    const hasDC = /distribution center|dc|warehouse|depot/.test(text);
+
+    // activity inference: 'supplied', 'transported', 'truck', 'by truck' => truck
+    let activityLabel = 'Truck';
+    if (/bom|bill of material|b o m/.test(text)) activityLabel = 'BOM';
+    if (/truck|transport|suppl|deliver/.test(text)) activityLabel = 'Truck';
+
+    // create nodes and place them nicely
+    const centerX = width / 2;
+    const topY = 80;
+    const midY = 220;
+    const bottomY = 360;
+
+    const createdPlantMaterals = [];
+    for (let i=0;i<nPlants;i++){
+      const x = centerX - (nPlants-1)*140/2 + i*140;
+      const matLabel = `${itemName} @ Plant ${i+1}`;
+      const mId = createNode('material', x, topY, matLabel);
+      createdPlantMaterals.push(mId);
+    }
+
+    // create trucks (activities) between each plant and DC
+    const truckIds = [];
+    createdPlantMaterals.forEach((mid, i) => {
+      const x = nodes[mid].x;
+      const tId = createNode('activity', x, midY, activityLabel);
+      truckIds.push(tId);
+      // connect material -> truck (material is consumed in activity)
+      createConnection(mid, tId);
+    });
+
+    if (hasDC) {
+      // create DC material in bottom center
+      const dcX = centerX;
+      const dcMatId = createNode('material', dcX, bottomY, `${itemName} @ DC`);
+      // connect each truck to DC
+      truckIds.forEach(tid => createConnection(tid, dcMatId));
+    } else {
+      // if no DC, just chain plant->truck->material same as a transfer
+      // create material at bottom as combined output
+      const outX = centerX;
+      const outMatId = createNode('material', outX, bottomY, `${itemName} Out`);
+      truckIds.forEach(tid => createConnection(tid, outMatId));
+    }
+    layer.draw(); arrowLayer.draw();
+    saveState();
+  }
+
+  document.getElementById('nlGo').addEventListener('click', () => {
+    const text = document.getElementById('nlInput').value.trim();
+    if (!text) { alert('Type a short natural-language instruction.'); return; }
+    nlParseAndCreate(text);
+  });
+
+  // Click on stage to cancel connect or context menu
+  stage.on('click', (e) => {
+    if (connectSource) {
+      highlightNode(connectSource, false);
+      connectSource = null;
+    }
+    hideContextMenu();
+  });
+
+  // responsive
+  window.addEventListener('resize', ()=> {
+    const w = window.innerWidth - 760;
+    const h = window.innerHeight - 140;
+    stage.width(Math.max(600, w));
+    stage.height(Math.max(400, h));
+  });
+
+  // Keep initial save state
+  saveState();
+
+  // Create a small starter example
+  (function starterExample(){
+    const m1 = createNode('material', 140, 80, 'Item A @ Plant 1');
+    const a1 = createNode('activity', 140, 220, 'Truck');
+    const m2 = createNode('material', 140, 360, 'Item A @ DC');
+    createConnection(m1,a1);
+    createConnection(a1,m2);
+    layer.draw(); arrowLayer.draw();
+    saveState();
+  })();
+
+  // Allow JSON import via file drag/drop (bonus)
+  document.addEventListener('dragover', (e)=> e.preventDefault());
+  document.addEventListener('drop', (e)=> {
+    e.preventDefault();
+    if (!e.dataTransfer) return;
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (file.type !== 'application/json') { alert('Drop a JSON file produced by Export JSON.'); return; }
+    const reader = new FileReader();
+    reader.onload = function(evt) { importJSON(evt.target.result); };
+    reader.readAsText(file);
+  });
+
+  </script>
+</body>
+</html>
