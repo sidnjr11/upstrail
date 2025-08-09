@@ -30,7 +30,7 @@
       line-height: 1.6;
     }
 
-    /* --- NEW SIDEBAR STYLES --- */
+    /* --- SIDEBAR STYLES --- */
     .sidebar {
       position: fixed;
       left: 0;
@@ -40,13 +40,14 @@
       background-color: var(--sidebar-bg);
       padding-top: 20px;
       color: white;
+      z-index: 100;
     }
 
     .sidebar .logo {
       text-align: center;
       margin-bottom: 20px;
     }
-    
+
     .sidebar .logo img {
         width: 70%;
         max-width: 150px;
@@ -65,14 +66,12 @@
     .sidebar a:hover, .sidebar a.active {
       background-color: #34495e;
     }
-
-    /* Main content area pushed to the right */
+    
+    /* --- Main Content Area --- */
     .main-content {
       margin-left: var(--sidebar-width);
-      padding: 20px 40px;
     }
-    /* --- END OF SIDEBAR STYLES --- */
-
+    
     header {
       background-color: white;
       padding: 20px 20px 10px;
@@ -85,13 +84,7 @@
       font-size: 2.25rem;
       color: var(--primary-color);
     }
-
-    header p {
-      margin-top: 10px;
-      font-size: 1rem;
-      color: #666;
-    }
-
+    
     .hero {
       text-align: center;
       padding: 40px 20px;
@@ -147,7 +140,7 @@
       color: var(--primary-color);
       margin-top: 0;
     }
-
+    
     footer {
       text-align: center;
       padding: 20px;
@@ -167,7 +160,7 @@
         padding-top: 0;
       }
       .sidebar .logo {
-          display: none; /* Hide logo in mobile bar to save space */
+          display: none;
       }
       .sidebar a {
         padding: 15px 10px;
@@ -176,21 +169,6 @@
       }
       .main-content {
         margin-left: 0;
-        padding: 20px;
-      }
-      header h1 {
-        font-size: 1.75rem;
-      }
-      .hero h2 {
-        font-size: 1.25rem;
-      }
-      .hero p,
-      header p {
-        font-size: 0.95rem;
-      }
-      .features {
-        flex-direction: column;
-        align-items: center;
       }
     }
   </style>
@@ -203,12 +181,12 @@
         <img src="logofinal.png" alt="Upstrail Logo">
     </div>
     <a href="#home" class="active">Home</a>
-    <a href="#tools">Tools & Downloads</a>
+    <a href="downloads.html">Tools & Downloads</a>
   </nav>
   
   <div class="main-content">
-    
-    <header id="home" style="padding-top: 0; padding-bottom: 20px;">
+  
+    <header id="home" style="padding-bottom: 20px;">
         <h1>Free & Open Source Supply Chain Tools</h1>
         <p>Built for students, analysts, and teams who need answers now.</p>
     </header>
@@ -216,7 +194,7 @@
     <section class="hero" style="border-bottom: 1px solid #dce1e8;">
       <h2>Powerful Network Modeling. Instantly.</h2>
       <p>Visualize and optimize your supply chain right in your browser. No installs, no sign-ups, no demos. Just open a tool and start building.</p>
-      <a href="vision.html" class="button">Launch Network Modeler</a>
+      <a href="sketch/index.html" class="button">Launch Network Modeler</a>
     </section>
 
     <section class="features" style="border-bottom: 1px solid #dce1e8;">
@@ -234,14 +212,14 @@
       </div>
     </section>
 
-    <section id="tools" style="background: #ffffff; padding: 60px 40px; text-align: center; max-width: 900px; margin: 40px auto; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 16px;">
+    <section style="background: #ffffff; padding: 60px 40px; text-align: center; max-width: 900px; margin: 40px auto; box-shadow: 0 4px 16px rgba(0,0,0,0.06); border-radius: 16px;">
         <h3 style="color: var(--primary-color); font-size: 1.6rem; margin-bottom: 16px;">
           Our Tool-Kit
         </h3>
         <p style="font-size: 1rem; max-width: 700px; margin: 0 auto 24px; color: #444;">
           A growing collection of free, open-source tools for everyday supply chain analysis.
         </p>
-        <a href="/downloads.html" class="button" style="display: inline-block; margin-top: 10px;">
+        <a href="downloads.html" class="button" style="display: inline-block; margin-top: 10px;">
           Browse All Tools & Plugins
         </a>
     </section>
@@ -256,14 +234,8 @@
     <footer>
       &copy; 2025 Upstrail. All rights reserved.
     </footer>
-
+    
   </div>
 
-  <script>
-    // No script needed for a modal anymore. 
-    // You can add other simple interactions here if you want.
-  </script>
 </body>
 </html>
-```
-
