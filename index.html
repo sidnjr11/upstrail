@@ -12,8 +12,6 @@
       --text-color: #222;
       --footer-color: #777;
       --section-bg: #ffffff;
-      --sidebar-bg: #2c3e50;
-      --sidebar-width: 240px;
     }
 
     * {
@@ -30,61 +28,26 @@
       line-height: 1.6;
     }
 
-    /* --- SIDEBAR STYLES --- */
-    .sidebar {
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: var(--sidebar-width);
-      height: 100%;
-      background-color: var(--sidebar-bg);
-      padding-top: 20px;
-      color: white;
-      z-index: 100;
-    }
-
-    .sidebar .logo {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .sidebar .logo img {
-        width: 70%;
-        max-width: 150px;
-        height: auto;
-    }
-
-    .sidebar a {
-      display: block;
-      color: #ecf0f1;
-      padding: 15px 25px;
-      text-decoration: none;
-      font-size: 1.1rem;
-      transition: background-color 0.3s ease;
-    }
-
-    .sidebar a:hover, .sidebar a.active {
-      background-color: #34495e;
-    }
-    
-    /* --- Main Content Area --- */
-    .main-content {
-      margin-left: var(--sidebar-width);
-    }
-    
     header {
-      background-color: white;
-      padding: 20px 20px 10px;
       text-align: center;
+      padding: 10px 20px;
+      background-color: white;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
-
-    header h1 {
-      margin: 0;
-      font-size: 2.25rem;
-      color: var(--primary-color);
-    }
     
+    header img {
+      width: clamp(120px, 18vw, 220px);
+      height: auto;
+    }
+
+    header hr {
+      border: none;
+      border-top: 1px solid #ccc;
+      margin: 5px auto 0;
+      width: 90%;
+      max-width: 900px;
+    }
+
     .hero {
       text-align: center;
       padding: 40px 20px;
@@ -140,7 +103,7 @@
       color: var(--primary-color);
       margin-top: 0;
     }
-    
+
     footer {
       text-align: center;
       padding: 20px;
@@ -148,49 +111,28 @@
       color: var(--footer-color);
     }
 
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-      .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-        display: flex;
-        justify-content: space-around;
+    @media (max-width: 600px) {
+      .hero h2 {
+        font-size: 1.25rem;
+      }
+      .hero p {
+        font-size: 0.95rem;
+      }
+      .features {
+        flex-direction: column;
         align-items: center;
-        padding-top: 0;
-      }
-      .sidebar .logo {
-          display: none;
-      }
-      .sidebar a {
-        padding: 15px 10px;
-        flex: 1;
-        text-align: center;
-      }
-      .main-content {
-        margin-left: 0;
       }
     }
   </style>
 </head>
 
 <body>
+  <header>
+    <img src="logofinal.png" alt="Upstrail Logo">
+    <hr>
+  </header>
 
-  <nav class="sidebar">
-    <div class="logo">
-        <img src="logofinal.png" alt="Upstrail Logo">
-    </div>
-    <a href="index.html" class="active">Home</a>
-    <a href="downloads.html">Tools & Downloads</a>
-  </nav>
-  
-  <div class="main-content">
-  
-    <header id="home" style="padding-bottom: 20px;">
-        <h1>Free & Open Source Supply Chain Tools</h1>
-        <p>Built for students, analysts, and teams who need answers now.</p>
-    </header>
-
+  <main>
     <section class="hero" style="border-bottom: 1px solid #dce1e8;">
       <h2>Powerful Network Modeling. Instantly.</h2>
       <p>Visualize and optimize your supply chain right in your browser. No installs, no sign-ups, no demos. Just open a tool and start building.</p>
@@ -230,12 +172,10 @@
         We believe powerful supply chain tools shouldn't be locked behind enterprise contracts and complex software. Our goal is to make planning and analysis accessible to everyone.
       </p>
     </section>
-
-    <footer>
-      &copy; 2025 Upstrail. All rights reserved.
-    </footer>
-    
-  </div>
-
+  </main>
+  
+  <footer>
+    &copy; 2025 Upstrail. All rights reserved.
+  </footer>
 </body>
 </html>
