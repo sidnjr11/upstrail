@@ -4,11 +4,72 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Upstrail – Downloads</title>
-  <link rel="stylesheet" href="styles.css" />
   <style>
-    body { font-family: Arial, sans-serif; background: #f7f9fc; margin: 0; padding: 0; }
+    :root {
+      --primary-color: #2e6edb;
+      --accent-color: #f9a826;
+      --background-color: #f0f4f8;
+      --text-color: #222;
+      --footer-color: #777;
+      --sidebar-bg: #2c3e50;
+      --sidebar-width: 240px;
+    }
+    
+    * { box-sizing: border-box; }
+
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: var(--background-color); 
+      margin: 0; 
+      padding: 0; 
+    }
+
+    /* --- SIDEBAR STYLES --- */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: var(--sidebar-width);
+      height: 100%;
+      background-color: var(--sidebar-bg);
+      padding-top: 20px;
+      color: white;
+      z-index: 100;
+    }
+
+    .sidebar .logo {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .sidebar .logo img {
+        width: 70%;
+        max-width: 150px;
+        height: auto;
+    }
+
+    .sidebar a {
+      display: block;
+      color: #ecf0f1;
+      padding: 15px 25px;
+      text-decoration: none;
+      font-size: 1.1rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .sidebar a:hover, .sidebar a.active {
+      background-color: #34495e;
+    }
+
+    /* --- Main Content Area --- */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      padding: 1px 0 0; /* Add padding to prevent margin collapse */
+    }
+
     header, footer { background: white; padding: 20px; text-align: center; }
     h1 { color: #2e6edb; }
+    
     .plugin-card {
       background: white;
       max-width: 800px;
@@ -20,6 +81,7 @@
     }
     .plugin-card h2 { margin-top: 0; color: #2e6edb; }
     .plugin-card p { line-height: 1.5; color: #333; }
+    
     .download-btn {
       display: inline-block;
       margin-top: 15px;
@@ -34,161 +96,99 @@
       background-color: #d58a1a;
     }
 
-    /* Modal Styling */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0, 0, 0, 0.6);
-    }
-
-    .modal-content {
-      background-color: #fff;
-      margin: 10% auto;
-      padding: 20px;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 400px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-      text-align: center;
-    }
-
-    .modal-content h2 {
-      margin-top: 0;
-    }
-
-     .modal-content input[type="email"] {
-      width: 100%;
-      max-width: 100%;
-      padding: 10px;
-      margin: 15px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 1rem;
-    }
-    
-
-    .modal-content button {
-      width: 100%;
-      padding: 10px;
-      background-color: #2e6edb;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-
-    .modal-content button:hover {
-      background-color: #1c50b0;
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding-top: 0;
+      }
+      .sidebar .logo {
+          display: none;
+      }
+      .sidebar a {
+        padding: 15px 10px;
+        flex: 1;
+        text-align: center;
+      }
+      .main-content {
+        margin-left: 0;
+      }
     }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Upstrail Plugin Library</h1>
-  <p>Excel-based tools to optimize supply chain decisions, one task at a time.</p>
-</header>
-
-<div class="plugin-card">
-  <h2>📦 Dead Stock Tracker (v1.1)</h2>
-  <p>This Excel plugin helps planners identify slow-moving or unsold SKUs using aging categories and recommended actions. Includes a full template, protected macros, and export options.</p>
-  <ul>
-    <li>✔ Built in Excel (no external tools)</li>
-    <li>✔ Recommended action logic</li>
-    <li>✔ Log tracking + PDF export</li>
-    <li>✔ README & version history included</li>
-  </ul>
-  <a class="download-btn" href="/downloads/Upstrail_Dead_Stock_Tracker_v1.1.zip" download onclick="showDownloadModal()">
-    📥 Download Plugin (.zip)
-  </a>
-</div>
-
-<div class="plugin-card">
-  <h2>📊 Reorder Quantity Suggestor (v1.1)</h2>
-  <p>This Excel plugin helps planners determine when and how much to reorder using reorder point logic, forecast or sales-based demand, and EOQ overrides. It’s lightweight, Excel-native, and fully customizable.</p>
-  <ul>
-    <li>✔ Calculates ROP and Suggested Quantity</li>
-    <li>✔ Forecast vs Sales logic toggle</li>
-    <li>✔ EOQ and Lead Time logic with defaults</li>
-    <li>✔ Validation log, audit trail, PDF export</li>
-    <li>✔ README & version history included</li>
-  </ul>
-  <a class="download-btn" href="/downloads/Upstrail_RQS_v1.1.zip" download onclick="showDownloadModal()">
-    📥 Download Plugin (.zip)
-  </a>
-</div>
-
-<div class="plugin-card">
-  <h2>📈 Forecast Pro (v1.1)</h2>
-  <p>
-    This Excel tool uses <strong>Python</strong> for robust sales and demand forecasting with multiple methods (simple average, moving average, exponential smoothing, and more). Built for planners needing reliable, flexible, and easy-to-use forecasting inside Excel.<br>
-    <strong>Note:</strong> File is hosted externally due to size.
-  </p>
-  <ul>
-    <li>✔ Multiple forecasting methods (SA, MA, ES, etc.)</li>
-    <li>✔ Customizable parameters</li>
-    <li>✔ Clean Excel interface, no add-ins required</li>
-    <li>✔ Powered by Python for advanced analytics</li>
-    <li>✔ PDF export, README, version history included</li>
-  </ul>
-  <a class="download-btn" href="https://drive.google.com/uc?export=download&id=1EY94zSYCT4NeY9YDgK4ox3EIznA-OnHz" target="_blank">
-    📥 Download Forecast Pro (.zip)
-  </a>
-</div>
-
-<!-- Email Modal (outside .plugin-card) -->
-<div id="downloadModal" class="modal">
-  <div class="modal-content">
-    <h2>Want updates when new plugins drop?</h2>
-    <input type="email" id="downloadEmail" placeholder="Enter your email" required>
-    <button onclick="submitDownloadEmail()">Notify Me</button>
+<nav class="sidebar">
+  <div class="logo">
+      <img src="logofinal.png" alt="Upstrail Logo">
   </div>
+  <a href="index.html">Home</a>
+  <a href="downloads.html" class="active">Tools & Downloads</a>
+</nav>
+
+<div class="main-content">
+  <header>
+    <h1>Upstrail Plugin Library</h1>
+    <p>Excel-based tools to optimize supply chain decisions, one task at a time.</p>
+  </header>
+
+  <div class="plugin-card">
+    <h2>📦 Dead Stock Tracker (v1.1)</h2>
+    <p>This Excel plugin helps planners identify slow-moving or unsold SKUs using aging categories and recommended actions. Includes a full template, protected macros, and export options.</p>
+    <ul>
+      <li>✔ Built in Excel (no external tools)</li>
+      <li>✔ Recommended action logic</li>
+      <li>✔ Log tracking + PDF export</li>
+      <li>✔ README & version history included</li>
+    </ul>
+    <a class="download-btn" href="/downloads/Upstrail_Dead_Stock_Tracker_v1.1.zip" download>
+      📥 Download Plugin (.zip)
+    </a>
+  </div>
+
+  <div class="plugin-card">
+    <h2>📊 Reorder Quantity Suggestor (v1.1)</h2>
+    <p>This Excel plugin helps planners determine when and how much to reorder using reorder point logic, forecast or sales-based demand, and EOQ overrides. It’s lightweight, Excel-native, and fully customizable.</p>
+    <ul>
+      <li>✔ Calculates ROP and Suggested Quantity</li>
+      <li>✔ Forecast vs Sales logic toggle</li>
+      <li>✔ EOQ and Lead Time logic with defaults</li>
+      <li>✔ Validation log, audit trail, PDF export</li>
+      <li>✔ README & version history included</li>
+    </ul>
+    <a class="download-btn" href="/downloads/Upstrail_RQS_v1.1.zip" download>
+      📥 Download Plugin (.zip)
+    </a>
+  </div>
+
+  <div class="plugin-card">
+    <h2>📈 Forecast Pro (v1.1)</h2>
+    <p>
+      This Excel tool uses <strong>Python</strong> for robust sales and demand forecasting with multiple methods (simple average, moving average, exponential smoothing, and more). Built for planners needing reliable, flexible, and easy-to-use forecasting inside Excel.<br>
+      <strong>Note:</strong> File is hosted externally due to size.
+    </p>
+    <ul>
+      <li>✔ Multiple forecasting methods (SA, MA, ES, etc.)</li>
+      <li>✔ Customizable parameters</li>
+      <li>✔ Clean Excel interface, no add-ins required</li>
+      <li>✔ Powered by Python for advanced analytics</li>
+      <li>✔ PDF export, README, version history included</li>
+    </ul>
+    <a class="download-btn" href="https://drive.google.com/uc?export=download&id=1EY94zSYCT4NeY9YDgK4ox3EIznA-OnHz" target="_blank">
+      📥 Download Forecast Pro (.zip)
+    </a>
+  </div>
+  
+  <footer>
+    &copy; 2025 Upstrail. Built with care for planners.
+  </footer>
+
 </div>
-
-<footer>
-  &copy; 2025 Upstrail. Built with care for planners.
-</footer>
-
-<script>
-  function showDownloadModal() {
-    setTimeout(() => {
-      document.getElementById('downloadModal').style.display = 'block';
-    }, 500);
-  }
-
-  function submitDownloadEmail() {
-    const email = document.getElementById('downloadEmail').value;
-    if (!email || !email.includes('@')) {
-      alert('Please enter a valid email.');
-      return;
-    }
-
-    fetch('https://script.google.com/macros/s/AKfycbzINA3ef956u7wTewP67JeVMsoXUAr_9k_nTDIFcemgkeIUvQHWl7AARuxovOmLhl4z/exec', {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `email=${encodeURIComponent(email)}`
-    });
-
-    alert('Thanks! You’ll be notified when new tools are added.');
-    document.getElementById('downloadEmail').value = '';
-    document.getElementById('downloadModal').style.display = 'none';
-  }
-
-  window.onclick = function(event) {
-    const modal = document.getElementById('downloadModal');
-    if (event.target === modal) {
-      modal.style.display = 'none';
-    }
-  }
-</script>
 
 </body>
 </html>
