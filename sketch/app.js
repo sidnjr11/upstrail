@@ -690,15 +690,12 @@ class SupplyChainCanvas {
             const targetNode = this.getNodeAt(pos.x, pos.y);
 
             if (targetNode && targetNode !== this.connectingFrom) {
-                // This handles drag-to-connect
                 if (this.createConnection(this.connectingFrom, targetNode)) {
                     this.setTool('select');
-                    this.connectingFrom = null; // Reset on successful connection
                 }
             }
-            // For click-click, we don't reset connectingFrom here.
-            // The next mousedown will handle completing or cancelling the connection.
             this.isDragging = false;
+            // Don't reset connectingFrom here for click-click
         }
     }
 
@@ -819,7 +816,7 @@ class SupplyChainCanvas {
 
     canConnect(nodeA, nodeB) {
         if (nodeA.type === 'textbox' || nodeB.type === 'textbox') {
-            return true;
+            return false;
         }
         return nodeA.type !== nodeB.type;
     }
