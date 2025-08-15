@@ -158,7 +158,7 @@ class SupplyChainCanvas {
         this.camera = { x: 0, y: 0, zoom: 1 };
         this.isPanning = false;
         this.panStart = { x: 0, y: 0 };
-        this.isSpacePressed = false;
+        this.isCtrlPressed = false;
         this.isResizing = false;
         this.resizeHandle = null;
         this.selectionBounds = null;
@@ -275,6 +275,7 @@ class SupplyChainCanvas {
     }
 
     initEventListeners() {
+        document.getElementById('panTool').addEventListener('click', () => this.setTool('pan'));
         document.getElementById('connectTool').addEventListener('click', () => this.setTool('connect'));
         document.getElementById('deleteTool').addEventListener('click', () => this.setTool('delete'));
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
@@ -283,7 +284,7 @@ class SupplyChainCanvas {
         this.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
         this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
-        document.addEventListener('keyup', (e) => { if (e.code === 'Space') this.isSpacePressed = false; });
+        document.addEventListener('keyup', (e) => { if (e.key === 'Control') this.isCtrlPressed = false; });
         document.getElementById('undoBtn').addEventListener('click', this.undo.bind(this));
         document.getElementById('saveBtn').addEventListener('click', this.save.bind(this));
         document.getElementById('loadBtn').addEventListener('click', this.load.bind(this));
@@ -315,7 +316,7 @@ class SupplyChainCanvas {
     }
 
     handleKeyDown(e) {
-        if (e.code === 'Space') this.isSpacePressed = true;
+        if (e.key === 'Control') this.isCtrlPressed = true;
         const editModal = document.getElementById('editModal');
         if (!editModal.classList.contains('hidden')) {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.saveEdit(); }
@@ -338,7 +339,7 @@ class SupplyChainCanvas {
     }
 
     setTool(toolName) {
-        document.querySelectorAll('#connectTool, #deleteTool').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('#panTool, #connectTool, #deleteTool').forEach(btn => btn.classList.remove('active'));
         if (toolName !== 'select') {
             const toolBtn = document.getElementById(`${toolName}Tool`);
             if (toolBtn) toolBtn.classList.add('active');
@@ -396,14 +397,17 @@ class SupplyChainCanvas {
     updateCanvasCursor() {
         const container = this.canvas.parentElement.parentElement;
         container.className = container.className.replace(/tool-\w+/g, '');
-        if (this.currentTool === 'connect') container.classList.add('tool-connect');
+        if (this.currentTool === 'pan') this.canvas.style.cursor = 'grab';
+        else if (this.currentTool === 'connect') container.classList.add('tool-connect');
         else if (this.currentTool === 'delete') container.classList.add('tool-delete');
+        else this.canvas.style.cursor = 'default';
         if (this.isDraggingElement) container.classList.add('dragging');
     }
 
     updateStatusText() {
         const statusMap = {
-            select: 'Default mode: Drag elements or create a selection window. Hold Space + Drag to pan.',
+            select: 'Default mode: Drag elements or create a selection window. Hold Ctrl + Drag to pan.',
+            pan: 'Pan mode: Drag the canvas to move your view.',
             connect: 'Connect mode: Click one element and then another to create a connection.',
             delete: 'Delete mode: Click elements or connections to delete them.'
         };
@@ -420,7 +424,7 @@ class SupplyChainCanvas {
         const clickedNode = this.getNodeAt(pos.x, pos.y);
         const clickedHandle = this.getResizeHandleAt(pos.x, pos.y);
 
-        if (this.isSpacePressed) {
+        if (this.isCtrlPressed || this.currentTool === 'pan') {
             this.isPanning = true;
             this.panStart = { x: e.clientX, y: e.clientY };
             this.canvas.style.cursor = 'grabbing';
@@ -560,7 +564,7 @@ class SupplyChainCanvas {
     handleMouseUp(e) {
         if (this.isPanning) {
             this.isPanning = false;
-            this.canvas.style.cursor = 'default';
+            this.updateCanvasCursor();
         }
         if (this.isSelecting) {
             this.isSelecting = false;
@@ -589,6 +593,7 @@ class SupplyChainCanvas {
                 this.selectedNodes.push(node);
             }
         });
+        this.updateSelectionBounds();
     }
 
     handleRightClick(e) {
@@ -732,11 +737,20 @@ class SupplyChainCanvas {
         this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
         this.ctx.lineWidth = 1 / this.camera.zoom;
         const gridSize = 20;
-        for (let x = 0; x <= this.canvas.width; x += gridSize) {
-            this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.canvas.height); this.ctx.stroke();
+
+        const left = -this.camera.x / this.camera.zoom;
+        const top = -this.camera.y / this.camera.zoom;
+        const right = (this.canvas.width - this.camera.x) / this.camera.zoom;
+        const bottom = (this.canvas.height - this.camera.y) / this.camera.zoom;
+
+        const startX = Math.floor(left / gridSize) * gridSize;
+        const startY = Math.floor(top / gridSize) * gridSize;
+
+        for (let x = startX; x < right; x += gridSize) {
+            this.ctx.beginPath(); this.ctx.moveTo(x, top); this.ctx.lineTo(x, bottom); this.ctx.stroke();
         }
-        for (let y = 0; y <= this.canvas.height; y += gridSize) {
-            this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(this.canvas.width, y); this.ctx.stroke();
+        for (let y = startY; y < bottom; y += gridSize) {
+            this.ctx.beginPath(); this.ctx.moveTo(left, y); this.ctx.lineTo(right, y); this.ctx.stroke();
         }
         this.ctx.restore();
     }
@@ -878,10 +892,17 @@ class SupplyChainCanvas {
         this.ctx.restore();
     }
 
-    drawSelectionBounds() {
+    updateSelectionBounds() {
         if (this.selectedNodes.length > 1) {
-            const bounds = this.calculateSelectionBounds();
-            this.selectionBounds = bounds;
+            this.selectionBounds = this.calculateSelectionBounds();
+        } else {
+            this.selectionBounds = null;
+        }
+    }
+
+    drawSelectionBounds() {
+        if (this.selectionBounds) {
+            const bounds = this.selectionBounds;
             this.ctx.save();
             this.ctx.strokeStyle = 'rgba(0, 123, 255, 0.8)';
             this.ctx.lineWidth = 1 / this.camera.zoom;
@@ -889,8 +910,6 @@ class SupplyChainCanvas {
             this.ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height);
             this.ctx.restore();
             this.drawResizeHandles(bounds);
-        } else {
-            this.selectionBounds = null;
         }
     }
 
@@ -946,14 +965,19 @@ class SupplyChainCanvas {
     }
 
     resizeSelection(pos) {
-        if (!this.isResizing || !this.selectionBounds) return;
+        if (!this.isResizing || !this.selectionBounds || !this.selectionBounds.original) return;
         const orig = this.selectionBounds.original;
         let scaleX = 1, scaleY = 1;
 
-        if (this.resizeHandle.includes('right')) scaleX = (pos.x - orig.x) / orig.width;
-        if (this.resizeHandle.includes('left')) scaleX = (orig.x + orig.width - pos.x) / orig.width;
-        if (this.resizeHandle.includes('bottom')) scaleY = (pos.y - orig.y) / orig.height;
-        if (this.resizeHandle.includes('top')) scaleY = (orig.y + orig.height - pos.y) / orig.height;
+        if (orig.width > 0) {
+            if (this.resizeHandle.includes('right')) scaleX = (pos.x - orig.x) / orig.width;
+            if (this.resizeHandle.includes('left')) scaleX = (orig.x + orig.width - pos.x) / orig.width;
+        }
+        
+        if (orig.height > 0) {
+            if (this.resizeHandle.includes('bottom')) scaleY = (pos.y - orig.y) / orig.height;
+            if (this.resizeHandle.includes('top')) scaleY = (orig.y + orig.height - pos.y) / orig.height;
+        }
 
         const anchor = {
             x: this.resizeHandle.includes('left') ? orig.x + orig.width : orig.x,
@@ -969,11 +993,9 @@ class SupplyChainCanvas {
     }
 
     handleWheel(e) {
-        if (e.ctrlKey) {
-            e.preventDefault();
-            const zoomAmount = e.deltaY > 0 ? 0.9 : 1.1;
-            this.zoom(zoomAmount, e.clientX, e.clientY);
-        }
+        e.preventDefault();
+        const zoomAmount = e.deltaY > 0 ? 0.9 : 1.1;
+        this.zoom(zoomAmount, e.clientX, e.clientY);
     }
 
     zoom(factor, clientX, clientY) {
@@ -988,6 +1010,7 @@ class SupplyChainCanvas {
 
         this.camera.x = mouseX - worldMouseX * newZoom;
         this.camera.y = mouseY - worldMouseY * newZoom;
+        
         this.camera.zoom = newZoom;
         
         this.updateZoomDisplay();

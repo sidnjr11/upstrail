@@ -43,6 +43,10 @@
                             <span>Text Box</span>
                             <div class="drag-hint">Drag to canvas</div>
                         </div>
+                        <button class="tool-btn" id="panTool" data-tool="pan">
+                            <div class="tool-icon">✋</div>
+                            <span>Pan</span>
+                        </button>
                         <button class="tool-btn" id="connectTool" data-tool="connect">
                             <div class="tool-icon">→</div>
                             <span>Connect</span>
@@ -101,12 +105,12 @@ Examples:
                             <span>Undo action</span>
                         </div>
                         <div class="shortcut-item">
-                            <kbd>Ctrl+X</kbd>
-                            <span>Cut selected</span>
+                            <kbd>Scroll</kbd>
+                            <span>Zoom In/Out</span>
                         </div>
                         <div class="shortcut-item">
-                            <kbd>Esc</kbd>
-                            <span>Return to select</span>
+                            <kbd>Ctrl+Drag</kbd>
+                            <span>Pan Canvas</span>
                         </div>
                     </div>
                 </div>
@@ -140,6 +144,12 @@ Examples:
                 </div>
                 <div class="status-bar">
                     <span id="statusText">Canvas ready. Default mode is select - drag elements to move. Drag tools from sidebar to create new elements.</span>
+                </div>
+                <div class="zoom-controls">
+                    <button id="zoomOutBtn" class="btn btn--secondary btn--sm">-</button>
+                    <span id="zoomLevel">100%</span>
+                    <button id="zoomInBtn" class="btn btn--secondary btn--sm">+</button>
+                    <button id="zoomResetBtn" class="btn btn--secondary btn--sm">Reset</button>
                 </div>
             </main>
         </div>
