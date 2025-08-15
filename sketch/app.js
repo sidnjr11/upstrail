@@ -55,12 +55,12 @@ class NLPParser {
             numbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
             locations: {
                 suppliers: ['supplier', 'vendor', 'source'],
-                production: ['plant', 'factory', 'manufacturing facility', 'production site','Manufacturing location'],
-                distribution: ['distribution center', 'dc', 'warehouse', 'depot', 'hub','sales center', 'JDC'],
+                production: ['plant', 'factory', 'manufacturing facility', 'production site'],
+                distribution: ['distribution center', 'dc', 'warehouse', 'depot', 'hub'],
                 retail: ['store', 'shop', 'retail', 'outlet', 'customer']
             },
             materials: ['raw material', 'finished good', 'item', 'product', 'goods', 'material', 'component', 'part', 'inventory'],
-            activities: ['Bom','routing','Sent','Being Sent','consumed in a bom', 'produce', 'distributed', 'manufacturing', 'production', 'assembly', 'processing', 'transportation', 'shipping', 'delivery', 'logistics', 'distribution','Procured','produced'.'purchased']
+            activities: ['consumed in a bom', 'produce', 'distributed', 'manufacturing', 'production', 'assembly', 'processing', 'transportation', 'shipping', 'delivery', 'logistics', 'distribution']
         };
     }
 
@@ -364,6 +364,10 @@ class SupplyChainCanvas {
             } else if (e.key === 'Escape') {
                 this.cancelEdit();
             }
+            return;
+        }
+
+        if (e.target.id === 'nlInput') {
             return;
         }
 
@@ -1097,7 +1101,6 @@ class SupplyChainCanvas {
         this.connectingFrom = null;
         this.nodeCounter = 0;
 
-												   
         this.generateFromParsedData(input);
 
         this.queueRender();
@@ -1115,17 +1118,12 @@ class SupplyChainCanvas {
             const finishedGood = this.addNode('material', 500, 225, 'Finished Good');
             const distribution = this.addNode('activity', 700, 225, 'Distribution');
             const dc = this.addNode('material', 900, 225, 'Distribution Center');
-												
-												
-																															
-		 
 
             this.createConnectionDirect(rawMaterial1, production);
             this.createConnectionDirect(rawMaterial2, production);
             this.createConnectionDirect(production, finishedGood);
             this.createConnectionDirect(finishedGood, distribution);
             this.createConnectionDirect(distribution, dc);
-														 
         } else {
             const parsed = this.nlpParser.parse(lowerInput);
             let quantity = 2;
