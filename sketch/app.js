@@ -564,6 +564,9 @@ class SupplyChainCanvas {
     handleMouseUp(e) {
         if (this.isPanning) {
             this.isPanning = false;
+            if (this.currentTool === 'pan') {
+                this.setTool('select');
+            }
             this.updateCanvasCursor();
         }
         if (this.isSelecting) {
