@@ -11,7 +11,7 @@
         <!-- Top Menu Bar -->
         <header class="header">
             <div class="header-content">
-                <h1 class="header-title">Enhanced Supply Chain Canvas</h1>
+                <h1 class="header-title">Supply Chain Canvas</h1>
                 <div class="header-actions">
                     <button class="btn btn--outline btn--sm" id="undoBtn" disabled>Undo (Ctrl+Z)</button>
                     <button class="btn btn--outline btn--sm" id="saveBtn">Save</button>
@@ -55,7 +55,7 @@
                 </div>
 
                 <div class="sidebar-section">
-                    <h3>Enhanced Natural Language</h3>
+                    <h3>Natural Language Diagram</h3>
                     <textarea 
                         id="nlInput" 
                         placeholder="Describe your supply chain with varied patterns...
@@ -75,7 +75,6 @@ Examples:
                         <div class="rule-item valid">✓ Activity → Material</div>
                         <div class="rule-item invalid">✕ Material → Material</div>
                         <div class="rule-item invalid">✕ Activity → Activity</div>
-                        <div class="rule-item info">ℹ Text boxes don't connect</div>
                     </div>
                 </div>
 
@@ -114,7 +113,7 @@ Examples:
 
                 <div class="sidebar-section">
                     <h3>Examples</h3>
-                    <button class="btn btn--outline btn--sm btn--full-width" id="loadExampleBtn">Load Sample Chain</button>
+                    <button class="btn btn--outline btn--sm btn--full-width" id="loadExampleBtn">Load Sample Network</button>
                 </div>
 
                 <div class="sidebar-section debug-info">
@@ -140,7 +139,7 @@ Examples:
                     <canvas id="canvas" width="800" height="600"></canvas>
                 </div>
                 <div class="status-bar">
-                    <span id="statusText">Enhanced canvas ready. Default mode is select - drag elements to move. Drag tools from sidebar to create new elements.</span>
+                    <span id="statusText">Canvas ready. Default mode is select - drag elements to move. Drag tools from sidebar to create new elements.</span>
                 </div>
             </main>
         </div>
@@ -148,11 +147,14 @@ Examples:
 
     <!-- Context Menu -->
     <div id="contextMenu" class="context-menu hidden">
-        <div class="context-menu-item" id="addConnectedMaterial">Add Connected Material</div>
-        <div class="context-menu-item" id="addConnectedActivity">Add Connected Activity</div>
-        <div class="context-menu-divider"></div>
-        <div class="context-menu-item" id="editLabel">Edit Label</div>
-        <div class="context-menu-item" id="deleteNode">Delete Node</div>
+        <div class="context-menu-item single-node-item" id="addConnectedMaterial">Add Connected Material</div>
+        <div class="context-menu-item single-node-item" id="addConnectedActivity">Add Connected Activity</div>
+        <div class="context-menu-divider single-node-item"></div>
+        <div class="context-menu-item single-node-item" id="editLabel">Edit Label</div>
+        <div class="context-menu-item single-node-item" id="deleteNode">Delete Node</div>
+        
+        <div class="context-menu-item multi-node-item" id="duplicateSelection">Duplicate Selection</div>
+        <div class="context-menu-item multi-node-item" id="deleteSelection">Delete Selection</div>
     </div>
 
     <!-- Edit Modal -->

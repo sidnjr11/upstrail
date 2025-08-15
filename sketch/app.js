@@ -140,11 +140,13 @@ class SupplyChainCanvas {
         this.ctx = this.canvas.getContext('2d');
         this.nodes = [];
         this.connections = [];
-        this.selectedNode = null;
+        this.selectedNodes = [];
         this.hoveredNode = null;
         this.currentTool = 'select'; // Default is always select
         this.isDragging = false;
         this.isDraggingElement = false;
+        this.isSelecting = false;
+        this.selectionRect = null;
         this.dragOffset = { x: 0, y: 0 };
         this.connectingFrom = null;
         this.nodeCounter = 0;
@@ -331,6 +333,8 @@ class SupplyChainCanvas {
         document.getElementById('addConnectedActivity').addEventListener('click', this.addConnectedActivity.bind(this));
         document.getElementById('editLabel').addEventListener('click', this.editLabel.bind(this));
         document.getElementById('deleteNode').addEventListener('click', this.deleteSelectedNode.bind(this));
+        document.getElementById('duplicateSelection').addEventListener('click', this.duplicateSelection.bind(this));
+        document.getElementById('deleteSelection').addEventListener('click', this.deleteSelection.bind(this));
 
         // Edit modal
         document.getElementById('saveEditBtn').addEventListener('click', this.saveEdit.bind(this));
@@ -420,27 +424,29 @@ class SupplyChainCanvas {
     }
 
     deselectAll() {
-        this.selectedNode = null;
+        this.selectedNodes = [];
         this.connectingFrom = null;
         this.hideContextMenu();
         this.queueRender();
     }
 
     deleteSelected() {
-        if (this.selectedNode) {
+        if (this.selectedNodes.length > 0) {
             this.saveState();
-            this.deleteNode(this.selectedNode);
-            this.selectedNode = null;
+            this.selectedNodes.forEach(node => this.deleteNode(node, false));
+            this.selectedNodes = [];
+            this.queueRender();
         }
     }
 
     cutSelected() {
-        if (this.selectedNode) {
-            this.stateManager.clipboard = JSON.parse(JSON.stringify(this.selectedNode));
+        if (this.selectedNodes.length > 0) {
+            this.stateManager.clipboard = JSON.parse(JSON.stringify(this.selectedNodes));
             this.saveState();
-            this.deleteNode(this.selectedNode);
-            this.selectedNode = null;
-            this.showStatus('Element cut to clipboard', 'success');
+            this.selectedNodes.forEach(node => this.deleteNode(node, false));
+            this.selectedNodes = [];
+            this.showStatus('Selection cut to clipboard', 'success');
+            this.queueRender();
         }
     }
 
@@ -450,7 +456,7 @@ class SupplyChainCanvas {
             this.nodes = JSON.parse(JSON.stringify(previousState.nodes));
             this.connections = JSON.parse(JSON.stringify(previousState.connections));
             this.nodeCounter = previousState.nodeCounter;
-            this.selectedNode = null;
+            this.selectedNodes = [];
             this.connectingFrom = null;
             this.hideContextMenu();
             this.queueRender();
@@ -490,56 +496,59 @@ class SupplyChainCanvas {
 
     handleMouseDown(e) {
         this.hideContextMenu();
-
         const pos = this.getMousePos(e);
         const clickedNode = this.getNodeAt(pos.x, pos.y);
 
         switch (this.currentTool) {
             case 'select':
                 if (clickedNode) {
-                    // Check if clicking on label area for editing
                     if (this.isClickOnLabel(pos, clickedNode)) {
                         this.enterLabelEditMode(clickedNode);
                         return;
                     }
 
-                    // Normal selection and dragging - FIXED
-                    this.selectedNode = clickedNode;
-                    this.isDraggingElement = true;
+                    if (!this.selectedNodes.includes(clickedNode)) {
+                        this.selectedNodes = [clickedNode];
+                    }
 
+                    this.isDraggingElement = true;
                     this.dragOffset = {
                         x: pos.x - clickedNode.x,
                         y: pos.y - clickedNode.y
                     };
-
                     this.updateCanvasCursor();
-                    this.updateDragStatus('Moving: ' + clickedNode.label);
+                    this.updateDragStatus(`Moving ${this.selectedNodes.length} element(s)`);
                 } else {
-                    this.selectedNode = null;
-                    this.connectingFrom = null;
-                    this.updateDragStatus('Ready');
+                    this.isSelecting = true;
+                    this.selectionRect = { startX: pos.x, startY: pos.y, endX: pos.x, endY: pos.y };
+                    this.selectedNodes = [];
                 }
                 break;
 
             case 'connect':
                 if (clickedNode) {
                     if (!this.connectingFrom) {
+                        // First click: initiate connection
                         this.connectingFrom = clickedNode;
-                        this.selectedNode = clickedNode;
-                        this.isDragging = true;
-                        this.showStatus(`Selected ${clickedNode.label}. Drag to another node to connect.`, 'info');
-                    } else if (this.connectingFrom !== clickedNode) {
-                        if (this.createConnection(this.connectingFrom, clickedNode)) {
-                            this.setTool('select'); // Return to select after connecting
-                        }
+                        this.selectedNodes = [clickedNode];
+                        this.isDragging = true; // This will be used to detect drag vs click
+                        this.showStatus(`Connecting from ${clickedNode.label}. Drag or click another node.`, 'info');
                     } else {
+                        // Second click: attempt to complete connection
+                        if (this.connectingFrom !== clickedNode) {
+                            if (this.createConnection(this.connectingFrom, clickedNode)) {
+                                this.setTool('select');
+                            }
+                        }
+                        // Reset regardless of outcome
                         this.connectingFrom = null;
-                        this.selectedNode = null;
-                        this.showStatus('Connection cancelled.', 'info');
+                        this.isDragging = false;
                     }
                 } else {
+                    // Clicked on empty space, cancel connection
                     this.connectingFrom = null;
-                    this.selectedNode = null;
+                    this.isDragging = false;
+                    this.deselectAll();
                 }
                 break;
 
@@ -547,20 +556,20 @@ class SupplyChainCanvas {
                 if (clickedNode) {
                     this.saveState();
                     this.deleteNode(clickedNode);
-                    this.setTool('select'); // Return to select after deleting
+                    this.setTool('select');
                 } else {
                     const connection = this.getConnectionAt(pos.x, pos.y);
                     if (connection) {
                         this.saveState();
                         this.deleteConnection(connection);
-                        this.setTool('select'); // Return to select after deleting
+                        this.setTool('select');
                     }
                 }
                 break;
         }
-
         this.queueRender();
     }
+
 
     isClickOnLabel(pos, node) {
         if (node.type === 'textbox') return false; // Textbox labels aren't editable via this method
@@ -586,7 +595,7 @@ class SupplyChainCanvas {
 
     enterLabelEditMode(node) {
         this.editingNode = node;
-        this.selectedNode = node;
+        this.selectedNodes = [node];
 
         const modal = document.getElementById('editModal');
         const input = document.getElementById('editInput');
@@ -605,7 +614,7 @@ class SupplyChainCanvas {
 
     enterTextEditMode(node) {
         this.editingNode = node;
-        this.selectedNode = node;
+        this.selectedNodes = [node];
 
         const modal = document.getElementById('editModal');
         const input = document.getElementById('editInput');
@@ -631,48 +640,81 @@ class SupplyChainCanvas {
             this.queueRender();
         }
 
-        // Handle dragging in connect mode
+        if (this.isSelecting) {
+            this.selectionRect.endX = pos.x;
+            this.selectionRect.endY = pos.y;
+            this.queueRender();
+            return;
+        }
+
         if (this.currentTool === 'connect' && this.connectingFrom && this.isDragging) {
             this.queueRender();
             return;
         }
 
-        // Handle node dragging in select mode - FIXED
-        if (this.isDraggingElement && this.selectedNode && this.currentTool === 'select') {
-            this.selectedNode.x = pos.x - this.dragOffset.x;
-            this.selectedNode.y = pos.y - this.dragOffset.y;
+        if (this.isDraggingElement && this.selectedNodes.length > 0) {
+            const dx = pos.x - (this.selectedNodes[0].x + this.dragOffset.x);
+            const dy = pos.y - (this.selectedNodes[0].y + this.dragOffset.y);
+            
+            this.selectedNodes.forEach(node => {
+                node.x += dx;
+                node.y += dy;
+            });
 
-            // Keep nodes within canvas bounds
-            const margin = this.selectedNode.type === 'textbox' ? 60 : 32;
-            this.selectedNode.x = Math.max(margin, Math.min(this.canvas.width - margin, this.selectedNode.x));
-            this.selectedNode.y = Math.max(margin, Math.min(this.canvas.height - margin, this.selectedNode.y));
+            this.dragOffset.x = pos.x - this.selectedNodes[0].x;
+            this.dragOffset.y = pos.y - this.selectedNodes[0].y;
 
             this.queueRender();
         }
     }
 
     handleMouseUp(e) {
-        // Save state after moving in select mode - FIXED
-        if (this.isDraggingElement && this.selectedNode && this.currentTool === 'select') {
-            this.saveState();
+        if (this.isSelecting) {
+            this.isSelecting = false;
+            this.selectNodesInRect();
+            this.selectionRect = null;
+            this.queueRender();
         }
 
-        // Handle connection creation in connect mode
+        if (this.isDraggingElement) {
+            this.isDraggingElement = false;
+            if (this.selectedNodes.length > 0) {
+                this.saveState();
+            }
+            this.updateCanvasCursor();
+            this.updateDragStatus('Ready');
+        }
+
         if (this.currentTool === 'connect' && this.connectingFrom && this.isDragging) {
             const pos = this.getMousePos(e);
             const targetNode = this.getNodeAt(pos.x, pos.y);
 
             if (targetNode && targetNode !== this.connectingFrom) {
+                // This handles drag-to-connect
                 if (this.createConnection(this.connectingFrom, targetNode)) {
-                    this.setTool('select'); // Return to select after connecting
+                    this.setTool('select');
+                    this.connectingFrom = null; // Reset on successful connection
                 }
             }
+            // For click-click, we don't reset connectingFrom here.
+            // The next mousedown will handle completing or cancelling the connection.
             this.isDragging = false;
         }
+    }
 
-        this.isDraggingElement = false;
-        this.updateCanvasCursor();
-        this.updateDragStatus('Ready');
+    selectNodesInRect() {
+        if (!this.selectionRect) return;
+        this.selectedNodes = [];
+        const x1 = Math.min(this.selectionRect.startX, this.selectionRect.endX);
+        const y1 = Math.min(this.selectionRect.startY, this.selectionRect.endY);
+        const x2 = Math.max(this.selectionRect.startX, this.selectionRect.endX);
+        const y2 = Math.max(this.selectionRect.startY, this.selectionRect.endY);
+
+        this.nodes.forEach(node => {
+            if (node.x > x1 && node.x < x2 && node.y > y1 && node.y < y2) {
+                this.selectedNodes.push(node);
+            }
+        });
     }
 
     handleRightClick(e) {
@@ -683,13 +725,15 @@ class SupplyChainCanvas {
         const clickedNode = this.getNodeAt(pos.x, pos.y);
 
         if (clickedNode) {
+            if (!this.selectedNodes.includes(clickedNode)) {
+                this.selectedNodes = [clickedNode];
+            }
             this.contextMenuNode = clickedNode;
-            this.selectedNode = clickedNode;
             this.showContextMenu(e.clientX, e.clientY);
             this.queueRender();
         } else {
             this.deselectAll();
-            this.showStatus('Right-click on elements for options. Drag tools from sidebar to create new elements.', 'info');
+            this.showStatus('Right-click on elements for options.', 'info');
         }
     }
 
@@ -732,7 +776,7 @@ class SupplyChainCanvas {
         }
 
         this.nodes.push(node);
-        this.selectedNode = node;
+        this.selectedNodes = [node];
         this.queueRender();
         return node;
     }
@@ -840,14 +884,15 @@ class SupplyChainCanvas {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    deleteNode(node) {
+    deleteNode(node, shouldRender = true) {
         this.nodes = this.nodes.filter(n => n.id !== node.id);
         this.connections = this.connections.filter(conn =>
             conn.from !== node.id && conn.to !== node.id
         );
-        this.selectedNode = null;
         this.showStatus(`Deleted ${node.label}`, 'success');
-        this.queueRender();
+        if (shouldRender) {
+            this.queueRender();
+        }
     }
 
     deleteConnection(connection) {
@@ -875,6 +920,7 @@ class SupplyChainCanvas {
         this.drawConnections();
         this.drawNodes();
         this.drawConnectionPreview();
+        this.drawSelectionRect();
     }
 
     drawGrid() {
@@ -901,6 +947,22 @@ class SupplyChainCanvas {
         this.ctx.restore();
     }
 
+    drawSelectionRect() {
+        if (this.isSelecting && this.selectionRect) {
+            this.ctx.save();
+            this.ctx.fillStyle = 'rgba(0, 123, 255, 0.2)';
+            this.ctx.strokeStyle = 'rgba(0, 123, 255, 0.8)';
+            this.ctx.lineWidth = 1;
+            const x = this.selectionRect.startX;
+            const y = this.selectionRect.startY;
+            const width = this.selectionRect.endX - x;
+            const height = this.selectionRect.endY - y;
+            this.ctx.fillRect(x, y, width, height);
+            this.ctx.strokeRect(x, y, width, height);
+            this.ctx.restore();
+        }
+    }
+
     drawConnectionPreview() {
         if (this.currentTool === 'connect' && this.connectingFrom && this.isDragging) {
             this.ctx.save();
@@ -921,7 +983,7 @@ class SupplyChainCanvas {
         this.nodes.forEach(node => {
             this.ctx.save();
 
-            const isSelected = this.selectedNode === node;
+            const isSelected = this.selectedNodes.includes(node);
             const isConnecting = this.connectingFrom === node;
 
             if (node.type === 'textbox') {
@@ -1097,7 +1159,7 @@ class SupplyChainCanvas {
 
         this.nodes = [];
         this.connections = [];
-        this.selectedNode = null;
+        this.selectedNodes = [];
         this.connectingFrom = null;
         this.nodeCounter = 0;
 
@@ -1238,16 +1300,25 @@ class SupplyChainCanvas {
         let menuX = Math.min(x, viewportWidth - menuWidth);
         let menuY = Math.min(y, viewportHeight - menuHeight);
 
-        menu.style.left = menuX + 'px';
-        menu.style.top = menuY + 'px';
+        menu.style.left = `${menuX}px`;
+        menu.style.top = `${menuY}px`;
         menu.classList.remove('hidden');
 
-        const materialItem = document.getElementById('addConnectedMaterial');
-        const activityItem = document.getElementById('addConnectedActivity');
+        const singleNodeItems = menu.querySelectorAll('.single-node-item');
+        const multiNodeItems = menu.querySelectorAll('.multi-node-item');
 
-        if (this.contextMenuNode) {
-            materialItem.style.display = this.contextMenuNode.type === 'activity' ? 'block' : 'none';
-            activityItem.style.display = this.contextMenuNode.type === 'material' ? 'block' : 'none';
+        if (this.selectedNodes.length > 1) {
+            singleNodeItems.forEach(item => item.style.display = 'none');
+            multiNodeItems.forEach(item => item.style.display = 'block');
+        } else {
+            singleNodeItems.forEach(item => item.style.display = 'block');
+            multiNodeItems.forEach(item => item.style.display = 'none');
+            const materialItem = document.getElementById('addConnectedMaterial');
+            const activityItem = document.getElementById('addConnectedActivity');
+            if (this.contextMenuNode) {
+                materialItem.style.display = this.contextMenuNode.type === 'activity' ? 'block' : 'none';
+                activityItem.style.display = this.contextMenuNode.type === 'material' ? 'block' : 'none';
+            }
         }
     }
 
@@ -1330,7 +1401,40 @@ class SupplyChainCanvas {
         if (this.contextMenuNode) {
             this.saveState();
             this.deleteNode(this.contextMenuNode);
+            this.selectedNodes = this.selectedNodes.filter(n => n.id !== this.contextMenuNode.id);
         }
+        this.hideContextMenu();
+    }
+
+    duplicateSelection() {
+        if (this.selectedNodes.length === 0) return;
+        this.saveState();
+        const newNodes = [];
+        const idMap = {};
+
+        this.selectedNodes.forEach(node => {
+            const newNode = JSON.parse(JSON.stringify(node));
+            newNode.id = `node_${++this.nodeCounter}`;
+            newNode.x += 20;
+            newNode.y += 20;
+            this.nodes.push(newNode);
+            newNodes.push(newNode);
+            idMap[node.id] = newNode.id;
+        });
+
+        this.connections.forEach(conn => {
+            if (idMap[conn.from] && idMap[conn.to]) {
+                this.connections.push({ from: idMap[conn.from], to: idMap[conn.to] });
+            }
+        });
+
+        this.selectedNodes = newNodes;
+        this.hideContextMenu();
+        this.queueRender();
+    }
+
+    deleteSelection() {
+        this.deleteSelected();
         this.hideContextMenu();
     }
 
@@ -1339,7 +1443,7 @@ class SupplyChainCanvas {
 
         this.nodes = [];
         this.connections = [];
-        this.selectedNode = null;
+        this.selectedNodes = [];
         this.connectingFrom = null;
         this.contextMenuNode = null;
         this.nodeCounter = 0;
@@ -1376,7 +1480,7 @@ class SupplyChainCanvas {
         this.saveState();
         this.nodes = [];
         this.connections = [];
-        this.selectedNode = null;
+        this.selectedNodes = [];
         this.connectingFrom = null;
         this.contextMenuNode = null;
         this.editingNode = null;
@@ -1428,7 +1532,7 @@ class SupplyChainCanvas {
                 this.nodes = data.nodes || [];
                 this.connections = data.connections || [];
                 this.nodeCounter = this.nodes.length;
-                this.selectedNode = null;
+                this.selectedNodes = [];
                 this.connectingFrom = null;
                 this.queueRender();
                 this.showStatus('Diagram loaded successfully!', 'success');
