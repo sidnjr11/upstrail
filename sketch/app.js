@@ -55,12 +55,12 @@ class NLPParser {
             numbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
             locations: {
                 suppliers: ['supplier', 'vendor', 'source'],
-                production: ['plant', 'factory', 'manufacturing facility', 'production site'],
-                distribution: ['distribution center', 'dc', 'warehouse', 'depot', 'hub'],
+                production: ['plant', 'factory', 'manufacturing facility', 'production site','Manufacturing location'],
+                distribution: ['distribution center', 'dc', 'warehouse', 'depot', 'hub','sales center', 'JDC'],
                 retail: ['store', 'shop', 'retail', 'outlet', 'customer']
             },
-            materials: ['item', 'product', 'goods', 'material', 'component', 'part', 'inventory'],
-            activities: ['manufacturing', 'production', 'assembly', 'processing', 'transportation', 'shipping', 'delivery', 'logistics', 'distribution']
+            materials: ['raw material', 'finished good', 'item', 'product', 'goods', 'material', 'component', 'part', 'inventory'],
+            activities: ['Bom','routing','Sent','Being Sent','consumed in a bom', 'produce', 'distributed', 'manufacturing', 'production', 'assembly', 'processing', 'transportation', 'shipping', 'delivery', 'logistics', 'distribution','Procured','produced'.'purchased']
         };
     }
 
@@ -126,9 +126,13 @@ class NLPParser {
         if (text.includes('between')) {
             flows.push('between');
         }
+        if (text.includes('then')) {
+            flows.push('then');
+        }
         return flows;
     }
 }
+
 
 class SupplyChainCanvas {
     constructor() {
@@ -1093,37 +1097,58 @@ class SupplyChainCanvas {
         this.connectingFrom = null;
         this.nodeCounter = 0;
 
-        const parsed = this.nlpParser.parse(input);
-        this.generateFromParsedData(parsed, input);
+												   
+        this.generateFromParsedData(input);
 
         this.queueRender();
         this.showStatus('Enhanced diagram generated from natural language!', 'success');
         document.getElementById('nlInput').value = '';
     }
 
-    generateFromParsedData(parsed, originalInput) {
+    generateFromParsedData(originalInput) {
         const lowerInput = originalInput.toLowerCase();
 
-        let quantity = 2;
-        if (parsed.quantities.length > 0) {
-            const q = parsed.quantities[0];
-            if (typeof q === 'number') quantity = q;
-            else if (q === 'one') quantity = 1;
-            else if (q === 'two') quantity = 2;
-            else if (q === 'three') quantity = 3;
-            else if (q === 'four') quantity = 4;
-            else if (q === 'five') quantity = 5;
-            else if (['multiple', 'several', 'many'].includes(q)) quantity = Math.max(2, Math.floor(Math.random() * 4) + 2);
-        }
+        if (lowerInput.includes('two raw materials') && lowerInput.includes('consumed in a bom to produce a finished good') && lowerInput.includes('distributed to a dc')) {
+            const rawMaterial1 = this.addNode('material', 100, 150, 'Raw Material 1');
+            const rawMaterial2 = this.addNode('material', 100, 300, 'Raw Material 2');
+            const production = this.addNode('activity', 300, 225, 'Production');
+            const finishedGood = this.addNode('material', 500, 225, 'Finished Good');
+            const distribution = this.addNode('activity', 700, 225, 'Distribution');
+            const dc = this.addNode('material', 900, 225, 'Distribution Center');
+												
+												
+																															
+		 
 
-        if (lowerInput.includes('two plants') && lowerInput.includes('distribution')) {
-            this.generateTwoPlantsToDC();
-        } else if (lowerInput.includes('supplier') && lowerInput.includes('factories')) {
-            this.generateSupplierToFactories(quantity);
-        } else if (lowerInput.includes('transportation') && lowerInput.includes('multiple')) {
-            this.generateTransportationNetwork(quantity);
+            this.createConnectionDirect(rawMaterial1, production);
+            this.createConnectionDirect(rawMaterial2, production);
+            this.createConnectionDirect(production, finishedGood);
+            this.createConnectionDirect(finishedGood, distribution);
+            this.createConnectionDirect(distribution, dc);
+														 
         } else {
-            this.generateVariedChain(quantity);
+            const parsed = this.nlpParser.parse(lowerInput);
+            let quantity = 2;
+            if (parsed.quantities.length > 0) {
+                const q = parsed.quantities[0];
+                if (typeof q === 'number') quantity = q;
+                else if (q === 'one') quantity = 1;
+                else if (q === 'two') quantity = 2;
+                else if (q === 'three') quantity = 3;
+                else if (q === 'four') quantity = 4;
+                else if (q === 'five') quantity = 5;
+                else if (['multiple', 'several', 'many'].includes(q)) quantity = Math.max(2, Math.floor(Math.random() * 4) + 2);
+            }
+
+            if (lowerInput.includes('two plants') && lowerInput.includes('distribution')) {
+                this.generateTwoPlantsToDC();
+            } else if (lowerInput.includes('supplier') && lowerInput.includes('factories')) {
+                this.generateSupplierToFactories(quantity);
+            } else if (lowerInput.includes('transportation') && lowerInput.includes('multiple')) {
+                this.generateTransportationNetwork(quantity);
+            } else {
+                this.generateVariedChain(quantity);
+            }
         }
     }
 
