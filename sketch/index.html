@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supply Chain Canvas - Fixed Drag & Drop</title>
+    <title>Enhanced Supply Chain Canvas</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,8 +11,9 @@
         <!-- Top Menu Bar -->
         <header class="header">
             <div class="header-content">
-                <h1 class="header-title">Supply Chain Canvas</h1>
+                <h1 class="header-title">Enhanced Supply Chain Canvas</h1>
                 <div class="header-actions">
+                    <button class="btn btn--outline btn--sm" id="undoBtn" disabled>Undo (Ctrl+Z)</button>
                     <button class="btn btn--outline btn--sm" id="saveBtn">Save</button>
                     <button class="btn btn--outline btn--sm" id="loadBtn">Load</button>
                     <button class="btn btn--outline btn--sm" id="exportBtn">Export PNG</button>
@@ -27,18 +28,21 @@
                 <div class="sidebar-section">
                     <h3>Tools</h3>
                     <div class="tool-grid">
-                        <button class="tool-btn active" id="selectTool" data-tool="select">
-                            <div class="tool-icon">⭰</div>
-                            <span>Select</span>
-                        </button>
-                        <button class="tool-btn" id="materialTool" data-tool="material">
+                        <div class="tool-btn draggable-tool" id="materialTool" data-tool="material" draggable="true">
                             <div class="tool-icon">▲</div>
                             <span>Material</span>
-                        </button>
-                        <button class="tool-btn" id="activityTool" data-tool="activity">
+                            <div class="drag-hint">Drag to canvas</div>
+                        </div>
+                        <div class="tool-btn draggable-tool" id="activityTool" data-tool="activity" draggable="true">
                             <div class="tool-icon">●</div>
                             <span>Activity</span>
-                        </button>
+                            <div class="drag-hint">Drag to canvas</div>
+                        </div>
+                        <div class="tool-btn draggable-tool" id="textboxTool" data-tool="textbox" draggable="true">
+                            <div class="tool-icon">📝</div>
+                            <span>Text Box</span>
+                            <div class="drag-hint">Drag to canvas</div>
+                        </div>
                         <button class="tool-btn" id="connectTool" data-tool="connect">
                             <div class="tool-icon">→</div>
                             <span>Connect</span>
@@ -51,10 +55,14 @@
                 </div>
 
                 <div class="sidebar-section">
-                    <h3>Natural Language</h3>
+                    <h3>Enhanced Natural Language</h3>
                     <textarea 
                         id="nlInput" 
-                        placeholder="Describe your supply chain... e.g., 'Create a network where two plants supply item A to one distribution center'"
+                        placeholder="Describe your supply chain with varied patterns...
+Examples:
+• Two plants manufacturing item A for three DCs
+• Show material flow from supplier to factories
+• Add transportation between multiple stores"
                         class="form-control nl-input"
                     ></textarea>
                     <button class="btn btn--primary btn--sm btn--full-width" id="generateBtn">Generate Diagram</button>
@@ -67,6 +75,40 @@
                         <div class="rule-item valid">✓ Activity → Material</div>
                         <div class="rule-item invalid">✕ Material → Material</div>
                         <div class="rule-item invalid">✕ Activity → Activity</div>
+                        <div class="rule-item info">ℹ Text boxes don't connect</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Usage Guide</h3>
+                    <div class="usage-list">
+                        <div class="usage-item">🖱️ Drag tools from sidebar to create elements</div>
+                        <div class="usage-item">📝 Click element labels to edit names</div>
+                        <div class="usage-item">📋 Click inside text boxes to edit content</div>
+                        <div class="usage-item">🔗 Click Connect tool, then drag between elements</div>
+                        <div class="usage-item">🗑️ Click Delete tool, then click elements to remove</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Keyboard Shortcuts</h3>
+                    <div class="shortcuts-list">
+                        <div class="shortcut-item">
+                            <kbd>Delete</kbd> / <kbd>Backspace</kbd>
+                            <span>Delete selected</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl+Z</kbd>
+                            <span>Undo action</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl+X</kbd>
+                            <span>Cut selected</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Esc</kbd>
+                            <span>Return to select</span>
+                        </div>
                     </div>
                 </div>
 
@@ -86,6 +128,9 @@
                     <div class="debug-item">
                         <small>Status: <span id="dragStatus">Ready</span></small>
                     </div>
+                    <div class="debug-item">
+                        <small>History: <span id="historyInfo">0 states</span></small>
+                    </div>
                 </div>
             </aside>
 
@@ -95,7 +140,7 @@
                     <canvas id="canvas" width="800" height="600"></canvas>
                 </div>
                 <div class="status-bar">
-                    <span id="statusText">Click and drag to move nodes. Right-click for context menu. Double-click to edit labels.</span>
+                    <span id="statusText">Enhanced canvas ready. Default mode is select - drag elements to move. Drag tools from sidebar to create new elements.</span>
                 </div>
             </main>
         </div>
@@ -113,8 +158,8 @@
     <!-- Edit Modal -->
     <div id="editModal" class="modal hidden">
         <div class="modal-content">
-            <h3>Edit Node Label</h3>
-            <input type="text" id="editInput" class="form-control" placeholder="Enter new label">
+            <h3>Edit Content</h3>
+            <textarea id="editInput" class="form-control edit-textarea" placeholder="Enter content"></textarea>
             <div class="modal-actions">
                 <button class="btn btn--primary" id="saveEditBtn">Save</button>
                 <button class="btn btn--outline" id="cancelEditBtn">Cancel</button>
