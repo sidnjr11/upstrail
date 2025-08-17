@@ -10,12 +10,10 @@ class StateManager {
         this.history = this.history.slice(0, this.currentIndex + 1);
         this.history.push(JSON.parse(JSON.stringify(state)));
         this.currentIndex++;
-
         if (this.history.length > this.maxHistorySize) {
             this.history.shift();
             this.currentIndex--;
         }
-
         this.updateUI();
     }
 
@@ -133,7 +131,6 @@ class NLPParser {
     }
 }
 
-
 class SupplyChainCanvas {
     constructor() {
         this.canvas = document.getElementById('canvas');
@@ -153,6 +150,10 @@ class SupplyChainCanvas {
         this.editingNode = null;
         this.draggedToolType = null;
         this.mousePos = { x: 0, y: 0 };
+        this.copySettings = {
+            padding: 20, // Default padding in pixels
+            backgroundColor: '#FFFFFF' // White background
+        };
 
         // New properties for zoom, pan, and resize
         this.camera = { x: 0, y: 0, zoom: 1 };
@@ -162,7 +163,6 @@ class SupplyChainCanvas {
         this.isResizing = false;
         this.resizeHandle = null;
         this.selectionBounds = null;
-
         this.stateManager = new StateManager();
         this.nlpParser = new NLPParser();
         this.isRendering = false;
@@ -296,13 +296,16 @@ class SupplyChainCanvas {
         document.getElementById('panTool').addEventListener('click', () => this.setTool('pan'));
         document.getElementById('connectTool').addEventListener('click', () => this.setTool('connect'));
         document.getElementById('deleteTool').addEventListener('click', () => this.setTool('delete'));
+
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
         this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
         this.canvas.addEventListener('mouseup', this.handleMouseUp.bind(this));
         this.canvas.addEventListener('contextmenu', this.handleRightClick.bind(this));
         this.canvas.addEventListener('dblclick', this.handleDoubleClick.bind(this));
+
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
         document.addEventListener('keyup', (e) => { if (e.key === 'Control') this.isCtrlPressed = false; });
+
         document.getElementById('undoBtn').addEventListener('click', this.undo.bind(this));
         document.getElementById('saveBtn').addEventListener('click', this.save.bind(this));
         document.getElementById('loadBtn').addEventListener('click', this.load.bind(this));
@@ -310,22 +313,27 @@ class SupplyChainCanvas {
         document.getElementById('clearBtn').addEventListener('click', this.clear.bind(this));
         document.getElementById('loadExampleBtn').addEventListener('click', this.loadExample.bind(this));
         document.getElementById('generateBtn').addEventListener('click', this.generateFromNL.bind(this));
+
+        // Context menu event listeners
         document.getElementById('addConnectedMaterial').addEventListener('click', this.addConnectedMaterial.bind(this));
         document.getElementById('addConnectedActivity').addEventListener('click', this.addConnectedActivity.bind(this));
         document.getElementById('editLabel').addEventListener('click', this.editLabel.bind(this));
         document.getElementById('deleteNode').addEventListener('click', this.deleteSelectedNode.bind(this));
         document.getElementById('duplicateSelection').addEventListener('click', this.duplicateSelection.bind(this));
         document.getElementById('deleteSelection').addEventListener('click', this.deleteSelection.bind(this));
+        document.getElementById('copyForExcel').addEventListener('click', this.copySelectionForExcel.bind(this));
+
         document.getElementById('saveEditBtn').addEventListener('click', this.saveEdit.bind(this));
         document.getElementById('cancelEditBtn').addEventListener('click', this.cancelEdit.bind(this));
         document.getElementById('fileInput').addEventListener('change', this.handleFileLoad.bind(this));
+
         document.addEventListener('click', (e) => {
             const contextMenu = document.getElementById('contextMenu');
             const editModal = document.getElementById('editModal');
             if (!contextMenu.contains(e.target) && !e.target.closest('canvas') && !contextMenu.classList.contains('hidden')) this.hideContextMenu();
             if (e.target === editModal) this.cancelEdit();
         });
-        
+
         // Zoom listeners
         this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
         document.getElementById('zoomInBtn').addEventListener('click', () => this.zoom(1.2));
@@ -335,24 +343,55 @@ class SupplyChainCanvas {
 
     handleKeyDown(e) {
         if (e.key === 'Control') this.isCtrlPressed = true;
+
         const editModal = document.getElementById('editModal');
         if (!editModal.classList.contains('hidden')) {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.saveEdit(); }
-            else if (e.key === 'Escape') this.cancelEdit();
-            return;
-        }
-        if (e.target.id === 'nlInput') return;
-
-        if (e.ctrlKey || e.metaKey) {
-            switch (e.key.toLowerCase()) {
-                case 'z': e.preventDefault(); this.undo(); break;
-                case 'x': e.preventDefault(); this.cutSelected(); break;
+            if (e.key === 'Enter' && !e.shiftKey) { 
+                e.preventDefault(); 
+                this.saveEdit(); 
+            } else if (e.key === 'Escape') {
+                this.cancelEdit();
             }
             return;
         }
+
+        // Don't handle shortcuts when typing in text inputs
+        if (e.target.id === 'nlInput' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+
+        if (e.ctrlKey || e.metaKey) {
+            switch (e.key.toLowerCase()) {
+                case 'z': 
+                    e.preventDefault(); 
+                    this.undo(); 
+                    break;
+                case 'x': 
+                    e.preventDefault(); 
+                    this.cutSelected(); 
+                    break;
+                case 'c':
+                    e.preventDefault();
+                    if (this.selectedNodes.length > 0) {
+                        this.copySelectionForExcel();
+                    } else {
+                        this.showStatus('Select elements to copy', 'warning');
+                    }
+                    break;
+            }
+            return;
+        }
+
         switch (e.key) {
-            case 'Delete': case 'Backspace': e.preventDefault(); this.deleteSelected(); break;
-            case 'Escape': this.deselectAll(); this.setTool('select'); break;
+            case 'Delete': 
+            case 'Backspace': 
+                e.preventDefault(); 
+                this.deleteSelected(); 
+                break;
+            case 'Escape': 
+                this.deselectAll(); 
+                this.setTool('select'); 
+                break;
         }
     }
 
@@ -416,10 +455,8 @@ class SupplyChainCanvas {
         const container = this.canvas.parentElement.parentElement;
         // Clear all tool classes first
         container.className = container.className.replace(/tool-\w+/g, '').replace(/dragging/g, '');
-        
         // Reset to default first
         this.canvas.style.cursor = 'default';
-        
         // Then apply the appropriate cursor based on state
         if (this.isPanning) {
             this.canvas.style.cursor = 'grabbing';
@@ -433,14 +470,6 @@ class SupplyChainCanvas {
         } else if (this.currentTool === 'delete') {
             container.classList.add('tool-delete');
         }
-        
-        // Debug cursor state
-        console.log('Cursor State:', {
-            isPanning: this.isPanning,
-            isDragging: this.isDraggingElement,
-            currentTool: this.currentTool,
-            cursor: this.canvas.style.cursor
-        });
     }
 
     updateStatusText() {
@@ -463,7 +492,7 @@ class SupplyChainCanvas {
         this.isPanning = false;
         this.isDraggingElement = false;
         this.isResizing = false;
-        
+
         const pos = this.getMousePos(e);
         const clickedNode = this.getNodeAt(pos.x, pos.y);
         const clickedHandle = this.getResizeHandleAt(pos.x, pos.y);
@@ -483,7 +512,10 @@ class SupplyChainCanvas {
                     this.selectionBounds.original = { ...this.selectionBounds };
                     this.selectedNodes.forEach(n => n.original = { x: n.x, y: n.y });
                 } else if (clickedNode) {
-                    if (this.isClickOnLabel(pos, clickedNode)) { this.enterLabelEditMode(clickedNode); return; }
+                    if (this.isClickOnLabel(pos, clickedNode)) { 
+                        this.enterLabelEditMode(clickedNode); 
+                        return; 
+                    }
                     if (!this.selectedNodes.includes(clickedNode)) this.selectedNodes = [clickedNode];
                     this.isDraggingElement = true;
                     this.dragOffset = { x: pos.x, y: pos.y };
@@ -496,7 +528,6 @@ class SupplyChainCanvas {
                     this.selectedNodes = [];
                 }
                 break;
-
             case 'connect':
                 if (clickedNode) {
                     if (!this.connectingFrom) {
@@ -511,7 +542,6 @@ class SupplyChainCanvas {
                     this.deselectAll();
                 }
                 break;
-
             case 'delete':
                 if (clickedNode) {
                     this.saveState();
@@ -571,6 +601,7 @@ class SupplyChainCanvas {
 
     handleMouseMove(e) {
         const pos = this.getMousePos(e);
+
         if (this.isPanning) {
             const dx = e.clientX - this.panStart.x;
             const dy = e.clientY - this.panStart.y;
@@ -608,28 +639,26 @@ class SupplyChainCanvas {
     handleMouseUp(e) {
         // First reset all interaction states
         const wasInteracting = this.isPanning || this.isDraggingElement || this.isResizing || this.isSelecting;
-        
         this.isPanning = false;
         this.isDraggingElement = false;
         this.isResizing = false;
-        
+
         if (this.isSelecting) {
             this.isSelecting = false;
             this.selectNodesInRect();
             this.selectionRect = null;
             this.queueRender();
         }
-        
+
         if (wasInteracting && this.selectedNodes.length > 0) {
             this.saveState();
         }
-        
+
         if (this.currentTool === 'pan') {
             this.setTool('select');
         }
-        
+
         this.updateDragStatus('Ready');
-        
         // Force cursor update after ALL state changes
         setTimeout(() => this.updateCanvasCursor(), 0);
         this.updateCanvasCursor();
@@ -642,6 +671,7 @@ class SupplyChainCanvas {
         const y1 = Math.min(this.selectionRect.startY, this.selectionRect.endY);
         const x2 = Math.max(this.selectionRect.startX, this.selectionRect.endX);
         const y2 = Math.max(this.selectionRect.startY, this.selectionRect.endY);
+
         this.nodes.forEach(node => {
             if (node.x > x1 && node.x < x2 && node.y > y1 && node.y < y2) {
                 this.selectedNodes.push(node);
@@ -653,15 +683,16 @@ class SupplyChainCanvas {
     handleRightClick(e) {
         e.preventDefault();
         e.stopPropagation();
-        
         // Reset all interaction states
         this.isPanning = false;
         this.isDraggingElement = false;
         this.isResizing = false;
-        
+
         if (this.isPanning) return;
+
         const pos = this.getMousePos(e);
         const clickedNode = this.getNodeAt(pos.x, pos.y);
+
         if (clickedNode) {
             if (!this.selectedNodes.includes(clickedNode)) this.selectedNodes = [clickedNode];
             this.contextMenuNode = clickedNode;
@@ -671,6 +702,7 @@ class SupplyChainCanvas {
             this.deselectAll();
             this.showStatus('Right-click on elements for options.', 'info');
         }
+
         // Ensure cursor is reset
         this.updateCanvasCursor();
     }
@@ -680,6 +712,7 @@ class SupplyChainCanvas {
         e.stopPropagation();
         const pos = this.getMousePos(e);
         const clickedNode = this.getNodeAt(pos.x, pos.y);
+
         if (clickedNode) {
             if (clickedNode.type === 'textbox') this.enterTextEditMode(clickedNode);
             else this.enterLabelEditMode(clickedNode);
@@ -687,11 +720,24 @@ class SupplyChainCanvas {
     }
 
     addNode(type, x, y, label = null) {
-        const defaultLabels = { material: `Material ${this.nodeCounter + 1}`, activity: `Activity ${this.nodeCounter + 1}`, textbox: 'Click to edit text' };
-        const node = {
-            id: `node_${++this.nodeCounter}`, type, shape: this.getNodeShape(type), label: label || defaultLabels[type], x, y
+        const defaultLabels = { 
+            material: `Material ${this.nodeCounter + 1}`, 
+            activity: `Activity ${this.nodeCounter + 1}`, 
+            textbox: 'Click to edit text' 
         };
-        if (type === 'textbox') { node.width = 120; node.height = 40; node.fontSize = 12; }
+        const node = {
+            id: `node_${++this.nodeCounter}`, 
+            type, 
+            shape: this.getNodeShape(type), 
+            label: label || defaultLabels[type], 
+            x, 
+            y
+        };
+        if (type === 'textbox') { 
+            node.width = 120; 
+            node.height = 40; 
+            node.fontSize = 12; 
+        }
         this.nodes.push(node);
         this.selectedNodes = [node];
         this.queueRender();
@@ -708,11 +754,16 @@ class SupplyChainCanvas {
             this.showStatus(`Invalid connection! ${fromNode.type} cannot connect to ${toNode.type}`, 'error');
             return false;
         }
-        const existing = this.connections.find(c => (c.from === fromNode.id && c.to === toNode.id) || (c.from === toNode.id && c.to === fromNode.id));
+
+        const existing = this.connections.find(c => 
+            (c.from === fromNode.id && c.to === toNode.id) || 
+            (c.from === toNode.id && c.to === fromNode.id)
+        );
         if (existing) {
             this.showStatus('Connection already exists!', 'warning');
             return false;
         }
+
         this.saveState();
         this.connections.push({ from: fromNode.id, to: toNode.id });
         this.showStatus(`Connected ${fromNode.label} → ${toNode.label}`, 'success');
@@ -730,7 +781,8 @@ class SupplyChainCanvas {
         for (let i = this.nodes.length - 1; i >= 0; i--) {
             const node = this.nodes[i];
             if (node.type === 'textbox') {
-                if (x >= node.x - node.width / 2 && x <= node.x + node.width / 2 && y >= node.y - node.height / 2 && y <= node.y + node.height / 2) return node;
+                if (x >= node.x - node.width / 2 && x <= node.x + node.width / 2 && 
+                    y >= node.y - node.height / 2 && y <= node.y + node.height / 2) return node;
             } else {
                 const dist = Math.sqrt((x - node.x) ** 2 + (y - node.y) ** 2);
                 if (dist <= 32) return node;
@@ -777,7 +829,10 @@ class SupplyChainCanvas {
     queueRender() {
         if (!this.isRendering) {
             this.isRendering = true;
-            requestAnimationFrame(() => { this.render(); this.isRendering = false; });
+            requestAnimationFrame(() => { 
+                this.render(); 
+                this.isRendering = false; 
+            });
         }
     }
 
@@ -786,12 +841,14 @@ class SupplyChainCanvas {
         this.ctx.save();
         this.ctx.translate(this.camera.x, this.camera.y);
         this.ctx.scale(this.camera.zoom, this.camera.zoom);
+
         this.drawGrid();
         this.drawConnections();
         this.drawNodes();
         this.drawConnectionPreview();
         this.drawSelectionBounds();
         this.drawSelectionRect();
+
         this.ctx.restore();
     }
 
@@ -799,8 +856,8 @@ class SupplyChainCanvas {
         this.ctx.save();
         this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
         this.ctx.lineWidth = 1 / this.camera.zoom;
-        const gridSize = 20;
 
+        const gridSize = 20;
         const left = -this.camera.x / this.camera.zoom;
         const top = -this.camera.y / this.camera.zoom;
         const right = (this.canvas.width - this.camera.x) / this.camera.zoom;
@@ -810,11 +867,19 @@ class SupplyChainCanvas {
         const startY = Math.floor(top / gridSize) * gridSize;
 
         for (let x = startX; x < right; x += gridSize) {
-            this.ctx.beginPath(); this.ctx.moveTo(x, top); this.ctx.lineTo(x, bottom); this.ctx.stroke();
+            this.ctx.beginPath(); 
+            this.ctx.moveTo(x, top); 
+            this.ctx.lineTo(x, bottom); 
+            this.ctx.stroke();
         }
+
         for (let y = startY; y < bottom; y += gridSize) {
-            this.ctx.beginPath(); this.ctx.moveTo(left, y); this.ctx.lineTo(right, y); this.ctx.stroke();
+            this.ctx.beginPath(); 
+            this.ctx.moveTo(left, y); 
+            this.ctx.lineTo(right, y); 
+            this.ctx.stroke();
         }
+
         this.ctx.restore();
     }
 
@@ -824,6 +889,7 @@ class SupplyChainCanvas {
             this.ctx.fillStyle = 'rgba(0, 123, 255, 0.2)';
             this.ctx.strokeStyle = 'rgba(0, 123, 255, 0.8)';
             this.ctx.lineWidth = 1 / this.camera.zoom;
+
             const { startX, startY, endX, endY } = this.selectionRect;
             this.ctx.fillRect(startX, startY, endX - startX, endY - startY);
             this.ctx.strokeRect(startX, startY, endX - startX, endY - startY);
@@ -850,8 +916,10 @@ class SupplyChainCanvas {
             this.ctx.save();
             const isSelected = this.selectedNodes.includes(node);
             const isConnecting = this.connectingFrom === node;
+
             if (node.type === 'textbox') this.drawTextBox(node, isSelected);
             else this.drawRegularNode(node, isSelected, isConnecting);
+
             this.ctx.restore();
         });
     }
@@ -859,13 +927,18 @@ class SupplyChainCanvas {
     drawTextBox(node, isSelected) {
         this.ctx.strokeStyle = '#000000';
         this.ctx.lineWidth = (isSelected ? 3 : 2) / this.camera.zoom;
-        if (isSelected) { this.ctx.shadowColor = '#000000'; this.ctx.shadowBlur = 10; }
+        if (isSelected) { 
+            this.ctx.shadowColor = '#000000'; 
+            this.ctx.shadowBlur = 10; 
+        }
         this.ctx.strokeRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
         this.ctx.shadowBlur = 0;
+
         this.ctx.fillStyle = '#000000';
         this.ctx.font = `${node.fontSize}px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
+
         const lines = this.wrapText(node.label, node.width - 10);
         const lineHeight = node.fontSize + 2;
         const startY = node.y - (lines.length - 1) * lineHeight / 2;
@@ -873,20 +946,29 @@ class SupplyChainCanvas {
     }
 
     drawRegularNode(node, isSelected, isConnecting) {
-        this.ctx.fillStyle = node.type === 'material' ? (isSelected || isConnecting ? '#21808d' : '#1fb8cd') : (isSelected || isConnecting ? '#d45b3a' : '#ffc185');
+        this.ctx.fillStyle = node.type === 'material' ? 
+            (isSelected || isConnecting ? '#21808d' : '#1fb8cd') : 
+            (isSelected || isConnecting ? '#d45b3a' : '#ffc185');
         this.ctx.strokeStyle = node.type === 'material' ? '#127681' : '#b4413c';
         this.ctx.lineWidth = (isSelected || isConnecting ? 3 : 2) / this.camera.zoom;
-        if (isSelected || isConnecting) { this.ctx.shadowColor = this.ctx.fillStyle; this.ctx.shadowBlur = 10; }
+
+        if (isSelected || isConnecting) { 
+            this.ctx.shadowColor = this.ctx.fillStyle; 
+            this.ctx.shadowBlur = 10; 
+        }
+
         this.ctx.beginPath();
         if (node.shape === 'triangle') this.drawTriangle(node.x, node.y, 32);
         else this.drawCircle(node.x, node.y, 25);
         this.ctx.fill();
         this.ctx.stroke();
         this.ctx.shadowBlur = 0;
+
         this.ctx.fillStyle = '#13343b';
         this.ctx.font = '12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
+
         const lines = this.wrapText(node.label, 100);
         const lineHeight = 14;
         const startY = node.y + 40;
@@ -897,6 +979,7 @@ class SupplyChainCanvas {
         const words = text.split(' ');
         const lines = [];
         let currentLine = words[0] || '';
+
         for (let i = 1; i < words.length; i++) {
             const testLine = currentLine + ' ' + words[i];
             if (this.ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
@@ -934,10 +1017,12 @@ class SupplyChainCanvas {
         const headLength = 12 / this.camera.zoom;
         const angle = Math.atan2(toY - fromY, toX - fromX);
         const nodeRadius = 30;
+
         const adjFromX = fromX + nodeRadius * Math.cos(angle);
         const adjFromY = fromY + nodeRadius * Math.sin(angle);
         const adjToX = toX - nodeRadius * Math.cos(angle);
         const adjToY = toY - nodeRadius * Math.sin(angle);
+
         this.ctx.save();
         this.ctx.strokeStyle = '#626c71';
         this.ctx.lineWidth = 2 / this.camera.zoom;
@@ -945,6 +1030,7 @@ class SupplyChainCanvas {
         this.ctx.moveTo(adjFromX, adjFromY);
         this.ctx.lineTo(adjToX, adjToY);
         this.ctx.stroke();
+
         this.ctx.fillStyle = '#626c71';
         this.ctx.beginPath();
         this.ctx.moveTo(adjToX, adjToY);
@@ -979,12 +1065,14 @@ class SupplyChainCanvas {
     calculateSelectionBounds() {
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         const padding = 40;
+
         this.selectedNodes.forEach(node => {
             minX = Math.min(minX, node.x);
             minY = Math.min(minY, node.y);
             maxX = Math.max(maxX, node.x);
             maxY = Math.max(maxY, node.y);
         });
+
         return {
             x: minX - padding,
             y: minY - padding,
@@ -996,6 +1084,7 @@ class SupplyChainCanvas {
     drawResizeHandles(bounds) {
         const handleSize = 8 / this.camera.zoom;
         const handles = this.getResizeHandles(bounds);
+
         this.ctx.save();
         this.ctx.fillStyle = 'rgba(0, 123, 255, 1)';
         Object.values(handles).forEach(handle => {
@@ -1018,6 +1107,7 @@ class SupplyChainCanvas {
         if (!this.selectionBounds) return null;
         const handles = this.getResizeHandles(this.selectionBounds);
         const handleSize = 10 / this.camera.zoom;
+
         for (const [pos, handle] of Object.entries(handles)) {
             if (x >= handle.x - handleSize / 2 && x <= handle.x + handleSize / 2 &&
                 y >= handle.y - handleSize / 2 && y <= handle.y + handleSize / 2) {
@@ -1029,6 +1119,7 @@ class SupplyChainCanvas {
 
     resizeSelection(pos) {
         if (!this.isResizing || !this.selectionBounds || !this.selectionBounds.original) return;
+
         const orig = this.selectionBounds.original;
         let scaleX = 1, scaleY = 1;
 
@@ -1036,7 +1127,7 @@ class SupplyChainCanvas {
             if (this.resizeHandle.includes('right')) scaleX = (pos.x - orig.x) / orig.width;
             if (this.resizeHandle.includes('left')) scaleX = (orig.x + orig.width - pos.x) / orig.width;
         }
-        
+
         if (orig.height > 0) {
             if (this.resizeHandle.includes('bottom')) scaleY = (pos.y - orig.y) / orig.height;
             if (this.resizeHandle.includes('top')) scaleY = (orig.y + orig.height - pos.y) / orig.height;
@@ -1070,16 +1161,14 @@ class SupplyChainCanvas {
         const worldMouseY = (mouseY - this.camera.y) / this.camera.zoom;
 
         const newZoom = Math.max(0.1, Math.min(5, this.camera.zoom * factor));
-
         this.camera.x = mouseX - worldMouseX * newZoom;
         this.camera.y = mouseY - worldMouseY * newZoom;
-        
         this.camera.zoom = newZoom;
-        
+
         this.updateZoomDisplay();
         this.queueRender();
     }
-    
+
     resetZoom() {
         this.camera.x = 0;
         this.camera.y = 0;
@@ -1098,12 +1187,14 @@ class SupplyChainCanvas {
             this.showStatus('Please enter a description first!', 'warning');
             return;
         }
+
         this.saveState();
         this.nodes = [];
         this.connections = [];
         this.selectedNodes = [];
         this.connectingFrom = null;
         this.nodeCounter = 0;
+
         this.generateFromParsedData(input);
         this.queueRender();
         this.showStatus('Enhanced diagram generated from natural language!', 'success');
@@ -1119,6 +1210,7 @@ class SupplyChainCanvas {
             const fg = this.addNode('material', 500, 225, 'Finished Good');
             const dist = this.addNode('activity', 700, 225, 'Distribution');
             const dc = this.addNode('material', 900, 225, 'Distribution Center');
+
             this.createConnectionDirect(rm1, prod);
             this.createConnectionDirect(rm2, prod);
             this.createConnectionDirect(prod, fg);
@@ -1135,27 +1227,44 @@ class SupplyChainCanvas {
 
     showContextMenu(x, y) {
         const menu = document.getElementById('contextMenu');
-        const menuWidth = 180, menuHeight = 120;
+        const menuWidth = 200, menuHeight = 200; // Increased height for more items
         const vpWidth = window.innerWidth, vpHeight = window.innerHeight;
+
         menu.style.left = `${Math.min(x, vpWidth - menuWidth)}px`;
         menu.style.top = `${Math.min(y, vpHeight - menuHeight)}px`;
         menu.classList.remove('hidden');
 
         const singleItems = menu.querySelectorAll('.single-node-item');
         const multiItems = menu.querySelectorAll('.multi-node-item');
+        const copyForExcel = document.getElementById('copyForExcel');
 
+        // Show/hide items based on selection count
         if (this.selectedNodes.length > 1) {
             singleItems.forEach(item => item.style.display = 'none');
             multiItems.forEach(item => item.style.display = 'block');
-        } else {
+            copyForExcel.style.display = 'block'; // Always show for multiple selection
+        } else if (this.selectedNodes.length === 1) {
             singleItems.forEach(item => item.style.display = 'block');
-            multiItems.forEach(item => item.style.display = 'none');
+            multiItems.forEach(item => {
+                if (item.id === 'copyForExcel') {
+                    item.style.display = 'block'; // Show copy for single selection too
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Show/hide specific items based on node type
             const matItem = document.getElementById('addConnectedMaterial');
             const actItem = document.getElementById('addConnectedActivity');
             if (this.contextMenuNode) {
                 matItem.style.display = this.contextMenuNode.type === 'activity' ? 'block' : 'none';
                 actItem.style.display = this.contextMenuNode.type === 'material' ? 'block' : 'none';
             }
+        } else {
+            // No selection
+            singleItems.forEach(item => item.style.display = 'none');
+            multiItems.forEach(item => item.style.display = 'none');
+            copyForExcel.style.display = 'none'; // Hide copy when nothing selected
         }
     }
 
@@ -1218,8 +1327,10 @@ class SupplyChainCanvas {
     duplicateSelection() {
         if (this.selectedNodes.length === 0) return;
         this.saveState();
+
         const newNodes = [];
         const idMap = {};
+
         this.selectedNodes.forEach(node => {
             const newNode = JSON.parse(JSON.stringify(node));
             newNode.id = `node_${++this.nodeCounter}`;
@@ -1229,11 +1340,13 @@ class SupplyChainCanvas {
             newNodes.push(newNode);
             idMap[node.id] = newNode.id;
         });
+
         this.connections.forEach(conn => {
             if (idMap[conn.from] && idMap[conn.to]) {
                 this.connections.push({ from: idMap[conn.from], to: idMap[conn.to] });
             }
         });
+
         this.selectedNodes = newNodes;
         this.hideContextMenu();
         this.queueRender();
@@ -1250,12 +1363,18 @@ class SupplyChainCanvas {
         this.connections = [];
         this.selectedNodes = [];
         this.nodeCounter = 0;
+
         this.sampleData.nodes.forEach(nodeData => {
             const node = { ...nodeData };
-            if (node.type === 'textbox') { node.width = 120; node.height = 40; node.fontSize = 12; }
+            if (node.type === 'textbox') { 
+                node.width = 120; 
+                node.height = 40; 
+                node.fontSize = 12; 
+            }
             this.nodes.push(node);
             this.nodeCounter++;
         });
+
         this.connections = [...this.sampleData.connections];
         this.resetZoom();
         this.showStatus('Sample supply chain loaded!', 'success');
@@ -1272,9 +1391,15 @@ class SupplyChainCanvas {
     }
 
     save() {
-        const data = { nodes: this.nodes, connections: this.connections, timestamp: new Date().toISOString(), version: '4.0' };
+        const data = { 
+            nodes: this.nodes, 
+            connections: this.connections, 
+            timestamp: new Date().toISOString(), 
+            version: '4.0' 
+        };
         const dataStr = JSON.stringify(data, null, 2);
         const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
         const link = document.createElement('a');
         link.setAttribute('href', dataUri);
         link.setAttribute('download', `enhanced-supply-chain-${new Date().toISOString().split('T')[0]}.json`);
@@ -1289,6 +1414,7 @@ class SupplyChainCanvas {
     handleFileLoad(e) {
         const file = e.target.files[0];
         if (!file) return;
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -1324,6 +1450,257 @@ class SupplyChainCanvas {
             this.updateStatusText();
             statusText.className = '';
         }, 4000);
+    }
+
+    // Enhanced Copy for Excel Implementation
+    getSelectionBounds() {
+        if (this.selectedNodes.length === 0) return null;
+        
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+        
+        this.selectedNodes.forEach(node => {
+            if (node.type === 'textbox') {
+                // For textboxes, use their width and height
+                const halfWidth = node.width / 2;
+                const halfHeight = node.height / 2;
+                minX = Math.min(minX, node.x - halfWidth);
+                minY = Math.min(minY, node.y - halfHeight);
+                maxX = Math.max(maxX, node.x + halfWidth);
+                maxY = Math.max(maxY, node.y + halfHeight);
+            } else {
+                // For regular nodes (circles, triangles)
+                const radius = node.shape === 'circle' ? 25 : 32;
+                minX = Math.min(minX, node.x - radius);
+                minY = Math.min(minY, node.y - radius);
+                maxX = Math.max(maxX, node.x + radius);
+                maxY = Math.max(maxY, node.y + radius);
+                
+                // Include label area for regular nodes
+                const labelY = node.y + 40;
+                const labelHeight = 20;
+                minY = Math.min(minY, labelY - labelHeight / 2);
+                maxY = Math.max(maxY, labelY + labelHeight / 2);
+            }
+        });
+        
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+    }
+
+    copySelectionForExcel() {
+        if (this.selectedNodes.length === 0) {
+            this.showStatus('No elements selected to copy', 'warning');
+            return;
+        }
+
+        // Calculate bounds of selection
+        const bounds = this.getSelectionBounds();
+        if (!bounds) return;
+
+        // Create a temporary canvas with padding
+        const tempCanvas = document.createElement('canvas');
+        const padding = this.copySettings.padding;
+        const scaleFactor = 2; // For high resolution output
+        
+        tempCanvas.width = (bounds.width + (padding * 2)) * scaleFactor;
+        tempCanvas.height = (bounds.height + (padding * 2)) * scaleFactor;
+        
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // Scale for high resolution
+        tempCtx.scale(scaleFactor, scaleFactor);
+        
+        // Set white background (no transparency)
+        tempCtx.fillStyle = this.copySettings.backgroundColor;
+        tempCtx.fillRect(0, 0, tempCanvas.width / scaleFactor, tempCanvas.height / scaleFactor);
+        
+        // Set up transform for drawing (translate to center the selection with padding)
+        tempCtx.translate(padding - bounds.x, padding - bounds.y);
+        
+        // Draw connections first (so they appear under nodes)
+        this.connections.forEach(conn => {
+            const fromNode = this.nodes.find(n => n.id === conn.from);
+            const toNode = this.nodes.find(n => n.id === conn.to);
+            
+            // Only draw connections where both nodes are selected
+            if (fromNode && toNode && 
+                this.selectedNodes.includes(fromNode) && 
+                this.selectedNodes.includes(toNode)) {
+                this.drawConnectionForExport(tempCtx, fromNode, toNode);
+            }
+        });
+        
+        // Draw nodes
+        this.selectedNodes.forEach(node => {
+            this.drawNodeForExport(tempCtx, node);
+        });
+        
+        // Copy to clipboard
+        tempCanvas.toBlob(blob => {
+            try {
+                const item = new ClipboardItem({ 'image/png': blob });
+                navigator.clipboard.write([item]).then(() => {
+                    this.showStatus(`Copied ${this.selectedNodes.length} element(s) to clipboard for Excel`, 'success');
+                }).catch(err => {
+                    console.error('Failed to copy to clipboard:', err);
+                    this.showStatus('Failed to copy to clipboard. Try using a supported browser.', 'error');
+                });
+            } catch (err) {
+                console.error('Failed to create clipboard item:', err);
+                this.showStatus('Clipboard API not supported in this browser', 'error');
+            }
+        }, 'image/png', 1.0);
+    }
+
+    // Helper method to draw connections for export
+    drawConnectionForExport(ctx, fromNode, toNode) {
+        const headLength = 12;
+        const angle = Math.atan2(toNode.y - fromNode.y, toNode.x - fromNode.x);
+        const nodeRadius = 30;
+        
+        // Calculate connection points (avoid overlapping with nodes)
+        const adjFromX = fromNode.x + nodeRadius * Math.cos(angle);
+        const adjFromY = fromNode.y + nodeRadius * Math.sin(angle);
+        const adjToX = toNode.x - nodeRadius * Math.cos(angle);
+        const adjToY = toNode.y - nodeRadius * Math.sin(angle);
+        
+        ctx.save();
+        ctx.strokeStyle = '#626c71';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Draw line
+        ctx.beginPath();
+        ctx.moveTo(adjFromX, adjFromY);
+        ctx.lineTo(adjToX, adjToY);
+        ctx.stroke();
+        
+        // Draw arrowhead
+        ctx.fillStyle = '#626c71';
+        ctx.beginPath();
+        ctx.moveTo(adjToX, adjToY);
+        ctx.lineTo(
+            adjToX - headLength * Math.cos(angle - Math.PI / 6),
+            adjToY - headLength * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.lineTo(
+            adjToX - headLength * Math.cos(angle + Math.PI / 6),
+            adjToY - headLength * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    // Helper method to draw nodes for export
+    drawNodeForExport(ctx, node) {
+        ctx.save();
+        
+        if (node.type === 'textbox') {
+            this.drawTextBoxForExport(ctx, node);
+        } else {
+            this.drawRegularNodeForExport(ctx, node);
+        }
+        
+        ctx.restore();
+    }
+
+    // Helper method to draw textboxes for export
+    drawTextBoxForExport(ctx, node) {
+        // Draw textbox border
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = '#ffffff';
+        
+        // Draw rectangle
+        ctx.fillRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
+        ctx.strokeRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
+        
+        // Draw text
+        ctx.fillStyle = '#000000';
+        ctx.font = `${node.fontSize}px Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Handle text wrapping
+        const lines = this.wrapTextForExport(ctx, node.label, node.width - 10);
+        const lineHeight = node.fontSize + 2;
+        const startY = node.y - (lines.length - 1) * lineHeight / 2;
+        
+        lines.forEach((line, index) => {
+            ctx.fillText(line, node.x, startY + index * lineHeight);
+        });
+    }
+
+    // Helper method to draw regular nodes for export
+    drawRegularNodeForExport(ctx, node) {
+        // Set colors based on node type
+        const isMaterial = node.type === 'material';
+        ctx.fillStyle = isMaterial ? '#1fb8cd' : '#ffc185';
+        ctx.strokeStyle = isMaterial ? '#127681' : '#b4413c';
+        ctx.lineWidth = 2;
+        
+        // Draw node shape
+        ctx.beginPath();
+        if (node.shape === 'triangle') {
+            this.drawTriangleForExport(ctx, node.x, node.y, 32);
+        } else {
+            ctx.arc(node.x, node.y, 25, 0, 2 * Math.PI);
+        }
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw label
+        ctx.fillStyle = '#13343b';
+        ctx.font = '12px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        
+        // Handle text wrapping for labels
+        const lines = this.wrapTextForExport(ctx, node.label, 100);
+        const lineHeight = 14;
+        const startY = node.y + 40;
+        
+        lines.forEach((line, index) => {
+            ctx.fillText(line, node.x, startY + index * lineHeight);
+        });
+    }
+
+    // Helper method to draw triangles for export
+    drawTriangleForExport(ctx, x, y, size) {
+        const h = size * Math.sqrt(3) / 2;
+        ctx.moveTo(x, y - h / 2);
+        ctx.lineTo(x - size / 2, y + h / 2);
+        ctx.lineTo(x + size / 2, y + h / 2);
+        ctx.closePath();
+    }
+
+    // Helper method for text wrapping in export
+    wrapTextForExport(ctx, text, maxWidth) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = words[0] || '';
+        
+        for (let i = 1; i < words.length; i++) {
+            const testLine = currentLine + ' ' + words[i];
+            const metrics = ctx.measureText(testLine);
+            
+            if (metrics.width > maxWidth && currentLine !== '') {
+                lines.push(currentLine);
+                currentLine = words[i];
+            } else {
+                currentLine = testLine;
+            }
+        }
+        lines.push(currentLine);
+        return lines;
     }
 }
 

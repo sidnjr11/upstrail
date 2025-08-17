@@ -8,180 +8,214 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Top Menu Bar -->
+        <!-- Header -->
         <header class="header">
             <div class="header-content">
                 <h1 class="header-title">Supply Chain Canvas</h1>
                 <div class="header-actions">
-                    <button class="btn btn--outline btn--sm" id="undoBtn" disabled>Undo (Ctrl+Z)</button>
-                    <button class="btn btn--outline btn--sm" id="saveBtn">Save</button>
-                    <button class="btn btn--outline btn--sm" id="loadBtn">Load</button>
-                    <button class="btn btn--outline btn--sm" id="exportBtn">Export PNG</button>
-                    <button class="btn btn--secondary btn--sm" id="clearBtn">Clear All</button>
+                    <button id="undoBtn" class="btn btn--secondary btn--sm" disabled>
+                        <span>Undo</span>
+                    </button>
+                    <button id="saveBtn" class="btn btn--secondary btn--sm">Save</button>
+                    <button id="loadBtn" class="btn btn--secondary btn--sm">Load</button>
+                    <button id="exportBtn" class="btn btn--secondary btn--sm">Export PNG</button>
+                    <button id="clearBtn" class="btn btn--secondary btn--sm">Clear</button>
+                    <button id="loadExampleBtn" class="btn btn--primary btn--sm">Load Example</button>
                 </div>
             </div>
         </header>
 
+        <!-- Main Content -->
         <div class="main-content">
-            <!-- Left Sidebar -->
+            <!-- Sidebar -->
             <aside class="sidebar">
+                <!-- Tools Section -->
                 <div class="sidebar-section">
                     <h3>Tools</h3>
                     <div class="tool-grid">
-                        <div class="tool-btn draggable-tool" id="materialTool" data-tool="material" draggable="true">
-                            <div class="tool-icon">▲</div>
-                            <span>Material</span>
-                            <div class="drag-hint">Drag to canvas</div>
-                        </div>
-                        <div class="tool-btn draggable-tool" id="activityTool" data-tool="activity" draggable="true">
-                            <div class="tool-icon">●</div>
-                            <span>Activity</span>
-                            <div class="drag-hint">Drag to canvas</div>
-                        </div>
-                        <div class="tool-btn draggable-tool" id="textboxTool" data-tool="textbox" draggable="true">
-                            <div class="tool-icon">📝</div>
-                            <span>Text Box</span>
-                            <div class="drag-hint">Drag to canvas</div>
-                        </div>
-                        <button class="tool-btn" id="panTool" data-tool="pan">
-                            <div class="tool-icon">✋</div>
+                        <button id="panTool" class="tool-btn" title="Pan tool - drag to move canvas view">
+                            <div class="tool-icon">🖐️</div>
                             <span>Pan</span>
                         </button>
-                        <button class="tool-btn" id="connectTool" data-tool="connect">
-                            <div class="tool-icon">→</div>
+                        <button id="connectTool" class="tool-btn" title="Connect tool - click nodes to connect them">
+                            <div class="tool-icon">🔗</div>
                             <span>Connect</span>
                         </button>
-                        <button class="tool-btn" id="deleteTool" data-tool="delete">
-                            <div class="tool-icon">✕</div>
+                        <button id="deleteTool" class="tool-btn" title="Delete tool - click to delete elements">
+                            <div class="tool-icon">🗑️</div>
                             <span>Delete</span>
                         </button>
                     </div>
                 </div>
 
+                <!-- Create Elements Section -->
                 <div class="sidebar-section">
-                    <h3>Natural Language Diagram</h3>
-                    <textarea 
-                        id="nlInput" 
-                        placeholder="Describe your supply chain with varied patterns...
-Examples:
-• Two plants manufacturing item A for three DCs
-• Show material flow from supplier to factories
-• Add transportation between multiple stores"
-                        class="form-control nl-input"
-                    ></textarea>
-                    <button class="btn btn--primary btn--sm btn--full-width" id="generateBtn">Generate Diagram</button>
+                    <h3>Create Elements</h3>
+                    <div class="tool-grid">
+                        <button id="materialTool" class="tool-btn draggable-tool" draggable="true" title="Material - drag to canvas to create">
+                            <div class="tool-icon">📦</div>
+                            <span>Material</span>
+                            <div class="drag-hint">Drag to create</div>
+                        </button>
+                        <button id="activityTool" class="tool-btn draggable-tool" draggable="true" title="Activity - drag to canvas to create">
+                            <div class="tool-icon">⚙️</div>
+                            <span>Activity</span>
+                            <div class="drag-hint">Drag to create</div>
+                        </button>
+                        <button id="textboxTool" class="tool-btn draggable-tool" draggable="true" title="Text Box - drag to canvas to create">
+                            <div class="tool-icon">📝</div>
+                            <span>Text Box</span>
+                            <div class="drag-hint">Drag to create</div>
+                        </button>
+                    </div>
                 </div>
 
+                <!-- Natural Language Generation -->
+                <div class="sidebar-section">
+                    <h3>Generate from Description</h3>
+                    <textarea id="nlInput" class="form-control nl-input" placeholder="Describe your supply chain... e.g., 'Two raw materials consumed in a BOM to produce a finished good that is distributed to a DC'"></textarea>
+                    <button id="generateBtn" class="btn btn--primary btn--full-width">Generate Diagram</button>
+                </div>
+
+                <!-- Connection Rules -->
                 <div class="sidebar-section">
                     <h3>Connection Rules</h3>
                     <div class="rules-list">
-                        <div class="rule-item valid">✓ Material → Activity</div>
-                        <div class="rule-item valid">✓ Activity → Material</div>
-                        <div class="rule-item invalid">✕ Material → Material</div>
-                        <div class="rule-item invalid">✕ Activity → Activity</div>
+                        <div class="rule-item valid">✅ Material → Activity</div>
+                        <div class="rule-item valid">✅ Activity → Material</div>
+                        <div class="rule-item valid">✅ Any → Text Box</div>
+                        <div class="rule-item info">ℹ️ Textboxes can connect to anything</div>
                     </div>
                 </div>
 
+                <!-- Usage Instructions -->
                 <div class="sidebar-section">
-                    <h3>Usage Guide</h3>
+                    <h3>How to Use</h3>
                     <div class="usage-list">
-                        <div class="usage-item">🖱️ Drag tools from sidebar to create elements</div>
-                        <div class="usage-item">📝 Click element labels to edit names</div>
-                        <div class="usage-item">📋 Click inside text boxes to edit content</div>
-                        <div class="usage-item">🔗 Click Connect tool, then drag between elements</div>
-                        <div class="usage-item">🗑️ Click Delete tool, then click elements to remove</div>
+                        <div class="usage-item">🖱️ Drag elements from sidebar to canvas</div>
+                        <div class="usage-item">✏️ Double-click elements to edit labels</div>
+                        <div class="usage-item">🔗 Use Connect tool to link elements</div>
+                        <div class="usage-item">📋 Right-click for context menu</div>
+                        <div class="usage-item">🎯 Drag to select multiple elements</div>
                     </div>
                 </div>
 
+                <!-- Keyboard Shortcuts -->
                 <div class="sidebar-section">
-                    <h3>Keyboard Shortcuts</h3>
+                    <h3>Shortcuts</h3>
                     <div class="shortcuts-list">
                         <div class="shortcut-item">
-                            <kbd>Delete</kbd> / <kbd>Backspace</kbd>
-                            <span>Delete selected</span>
-                        </div>
-                        <div class="shortcut-item">
+                            <span>Undo</span>
                             <kbd>Ctrl+Z</kbd>
-                            <span>Undo action</span>
                         </div>
                         <div class="shortcut-item">
-                            <kbd>Scroll</kbd>
-                            <span>Zoom In/Out</span>
+                            <span>Copy for Excel</span>
+                            <kbd>Ctrl+C</kbd>
                         </div>
                         <div class="shortcut-item">
+                            <span>Delete</span>
+                            <kbd>Del</kbd>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Pan Mode</span>
                             <kbd>Ctrl+Drag</kbd>
-                            <span>Pan Canvas</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <span>Escape Selection</span>
+                            <kbd>Esc</kbd>
                         </div>
                     </div>
                 </div>
 
-                <div class="sidebar-section">
-                    <h3>Examples</h3>
-                    <button class="btn btn--outline btn--sm btn--full-width" id="loadExampleBtn">Load Sample Network</button>
-                </div>
-
-                <div class="sidebar-section debug-info">
+                <!-- Debug Information -->
+                <div class="debug-info">
                     <h3>Debug Info</h3>
                     <div class="debug-item">
-                        <small>Mouse: <span id="mouseCoords">-</span></small>
+                        <small>Canvas Size:</small>
+                        <span id="canvasSize">-</span>
                     </div>
                     <div class="debug-item">
-                        <small>Canvas: <span id="canvasSize">800×600</span></small>
+                        <small>Mouse:</small>
+                        <span id="mouseCoords">-</span>
                     </div>
                     <div class="debug-item">
-                        <small>Status: <span id="dragStatus">Ready</span></small>
-                    </div>
-                    <div class="debug-item">
-                        <small>History: <span id="historyInfo">0 states</span></small>
+                        <small>History:</small>
+                        <span id="historyInfo">-</span>
                     </div>
                 </div>
             </aside>
 
-            <!-- Main Canvas Area -->
-            <main class="canvas-container">
+            <!-- Canvas Area -->
+            <div class="canvas-container">
                 <div class="canvas-wrapper">
-                    <canvas id="canvas" width="800" height="600"></canvas>
+                    <canvas id="canvas" width="1200" height="800"></canvas>
                 </div>
+
+                <!-- Zoom Controls -->
+                <div class="zoom-controls">
+                    <button id="zoomOutBtn" class="btn btn--sm">-</button>
+                    <span id="zoomLevel">100%</span>
+                    <button id="zoomInBtn" class="btn btn--sm">+</button>
+                    <button id="zoomResetBtn" class="btn btn--sm">Reset</button>
+                </div>
+
+                <!-- Status Bar -->
                 <div class="status-bar">
                     <span id="statusText">Canvas ready. Default mode is select - drag elements to move. Drag tools from sidebar to create new elements.</span>
+                    <span id="dragStatus" style="margin-left: 20px;">Ready</span>
                 </div>
-                <div class="zoom-controls">
-                    <button id="zoomOutBtn" class="btn btn--secondary btn--sm">-</button>
-                    <span id="zoomLevel">100%</span>
-                    <button id="zoomInBtn" class="btn btn--secondary btn--sm">+</button>
-                    <button id="zoomResetBtn" class="btn btn--secondary btn--sm">Reset</button>
-                </div>
-            </main>
+            </div>
         </div>
     </div>
 
     <!-- Context Menu -->
     <div id="contextMenu" class="context-menu hidden">
-        <div class="context-menu-item single-node-item" id="addConnectedMaterial">Add Connected Material</div>
-        <div class="context-menu-item single-node-item" id="addConnectedActivity">Add Connected Activity</div>
+        <!-- Single node items -->
+        <div id="addConnectedMaterial" class="context-menu-item single-node-item">
+            Add Connected Material
+        </div>
+        <div id="addConnectedActivity" class="context-menu-item single-node-item">
+            Add Connected Activity
+        </div>
+        <div id="editLabel" class="context-menu-item single-node-item">
+            Edit Label
+        </div>
         <div class="context-menu-divider single-node-item"></div>
-        <div class="context-menu-item single-node-item" id="editLabel">Edit Label</div>
-        <div class="context-menu-item single-node-item" id="deleteNode">Delete Node</div>
+        <div id="deleteNode" class="context-menu-item single-node-item">
+            Delete Node
+        </div>
         
-        <div class="context-menu-item multi-node-item" id="duplicateSelection">Duplicate Selection</div>
-        <div class="context-menu-item multi-node-item" id="deleteSelection">Delete Selection</div>
+        <!-- Multi-selection items -->
+        <div id="duplicateSelection" class="context-menu-item multi-node-item">
+            Duplicate Selection
+        </div>
+        <div id="deleteSelection" class="context-menu-item multi-node-item">
+            Delete Selection
+        </div>
+        
+        <!-- Copy for Excel - available for both single and multi-selection -->
+        <div class="context-menu-divider"></div>
+        <div id="copyForExcel" class="context-menu-item">
+            📋 Copy for Excel
+        </div>
     </div>
 
     <!-- Edit Modal -->
     <div id="editModal" class="modal hidden">
         <div class="modal-content">
             <h3>Edit Content</h3>
-            <textarea id="editInput" class="form-control edit-textarea" placeholder="Enter content"></textarea>
+            <textarea id="editInput" class="form-control edit-textarea" placeholder="Enter content..."></textarea>
             <div class="modal-actions">
-                <button class="btn btn--primary" id="saveEditBtn">Save</button>
-                <button class="btn btn--outline" id="cancelEditBtn">Cancel</button>
+                <button id="cancelEditBtn" class="btn btn--secondary">Cancel</button>
+                <button id="saveEditBtn" class="btn btn--primary">Save</button>
             </div>
         </div>
     </div>
 
-    <!-- Load File Input -->
+    <!-- Hidden file input for loading -->
     <input type="file" id="fileInput" accept=".json" style="display: none;">
 
+    <!-- JavaScript -->
     <script src="app.js"></script>
 </body>
 </html>
