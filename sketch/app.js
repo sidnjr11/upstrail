@@ -46,90 +46,165 @@ class StateManager {
     }
 }
 
+/**
+ * @class NLPParser
+ * An enhanced parser for interpreting natural language descriptions of supply chains.
+ * It identifies quantities, materials, activities, and transitional phrases to
+ * build a structured representation of the supply chain flow.
+ */
 class NLPParser {
     constructor() {
-        this.patterns = {
-            quantities: ['one', 'two', 'three', 'four', 'five', 'multiple', 'several', 'many', 'a few'],
-            numbers: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
-            locations: {
-                suppliers: ['supplier', 'vendor', 'source'],
-                production: ['plant', 'factory', 'manufacturing facility', 'production site'],
-                distribution: ['distribution center', 'dc', 'warehouse', 'depot', 'hub'],
-                retail: ['store', 'shop', 'retail', 'outlet', 'customer']
-            },
-            materials: ['raw material', 'finished good', 'item', 'product', 'goods', 'material', 'component', 'part', 'inventory'],
-            activities: ['consumed in a bom', 'produce', 'distributed', 'manufacturing', 'production', 'assembly', 'processing', 'transportation', 'shipping', 'delivery', 'logistics', 'distribution']
+        // Dictionary to map quantity words to numbers. 'multiple' and 'several' default to 3.
+        this.quantityMap = {
+            'one': 1, 'a': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+            'multiple': 3, 'several': 3, 'many': 3, 'a few': 3
         };
+
+        // Keywords for identifying material nodes.
+        this.materialKeywords = [
+            'raw material', 'raw materials', 'component', 'components', 'part', 'parts', 'ingredient', 'ingredients',
+            'finished good', 'finished goods', 'finished product', 'finished products', 'product', 'products', 'item', 'items',
+            'good', 'goods', 'inventory', 'materials', 'material',
+            'supplier', 'suppliers', 'vendor', 'vendors', 'customer', 'customers', 'store', 'stores', 'warehouse', 'warehouses',
+            'distribution center', 'dc', 'hub', 'hubs', 'depot', 'depots', 'plant'
+        ];
+
+        // Keywords for identifying activity nodes.
+        this.activityKeywords = [
+            'manufacturing', 'assembly', 'processing', 'production', 'produce', 'create', 'make', 'build',
+            'distribution', 'shipping', 'delivery', 'logistics', 'transportation', 'distribute', 'ship', 'deliver',
+            'consumed in a bom', 'consumed', 'sent', 'transported', 'shipped', 'truck'
+        ];
+        
+        // Words that indicate a transition but don't create a node.
+        this.transitionWords = ['then', 'next', 'after', 'to', 'from', 'and', 'being', 'is', 'at'];
     }
 
-    parse(text) {
-        const lowerText = text.toLowerCase();
-        return {
-            quantities: this.extractQuantities(lowerText),
-            locations: this.extractLocations(lowerText),
-            materials: this.extractMaterials(lowerText),
-            activities: this.extractActivities(lowerText),
-            flows: this.extractFlows(lowerText)
-        };
-    }
+    /**
+     * Parses complex sentences involving movement (e.g., from/to/via).
+     * @param {string} text - The user's input string.
+     * @returns {Array|null} An array of structured "step" objects or null if the pattern doesn't match.
+     */
+    parseMovement(text) {
+        const fromPattern = /from ([\w\s]+?)(?=\sto\s|via\s|$)/;
+        const toPattern = /to ([\w\s]+?)(?=\sfrom\s|via\s|$)/;
+        const viaPattern = /via ([\w\s]+?)(?=\sfrom\s|to\s|$)/;
+        // Pattern to capture the material, which usually comes before verbs like "sent", "transported", etc.
+        const materialPattern = /([\w\s]+?)(?=\sbeing sent|\sis sent|\sbeing transported|\sis transported)/;
 
-    extractQuantities(text) {
-        const quantities = [];
-        this.patterns.quantities.forEach(q => {
-            if (text.includes(q)) quantities.push(q);
-        });
-        this.patterns.numbers.forEach(n => {
-            if (text.includes(n)) quantities.push(parseInt(n));
-        });
-        return quantities;
-    }
+        const fromMatch = text.match(fromPattern);
+        const toMatch = text.match(toPattern);
+        let viaMatch = text.match(viaPattern);
+        let materialMatch = text.match(materialPattern);
+        
+        // A more general material match if the specific one fails
+        if (!materialMatch) {
+            materialMatch = text.match(/(a|one|two|three|multiple|several)?\s?([\w\s]+?)(?=\sfrom\s)/);
+        }
 
-    extractLocations(text) {
-        const locations = { suppliers: [], production: [], distribution: [], retail: [] };
-        Object.keys(this.patterns.locations).forEach(category => {
-            this.patterns.locations[category].forEach(loc => {
-                if (text.includes(loc)) {
-                    locations[category].push(loc);
+        const source = fromMatch ? this.findKeyword(fromMatch[1].trim()) : null;
+        const destination = toMatch ? this.findKeyword(toMatch[1].trim()) : null;
+        let activity = viaMatch ? this.findKeyword(viaMatch[1].trim()) : null;
+        const material = materialMatch ? this.findKeyword(materialMatch[1].trim() || materialMatch[2].trim()) : null;
+
+        // If 'via' keyword is not present, infer activity from verbs.
+        if (!activity) {
+            for (const verb of ['sent', 'transported', 'shipped']) {
+                if (text.includes(verb)) {
+                    activity = { type: 'activity', label: this.capitalize(verb) };
+                    break;
                 }
-            });
-        });
-        return locations;
+            }
+        }
+        
+        if (material && source && destination && activity) {
+            return [{
+                material: material.label,
+                source: source.label,
+                destination: destination.label,
+                activity: activity.label
+            }];
+        }
+        return null;
     }
 
-    extractMaterials(text) {
-        const materials = [];
-        this.patterns.materials.forEach(mat => {
-            if (text.includes(mat)) materials.push(mat);
-        });
-        const itemMatches = text.match(/(item|product|material)\s+[a-z]/gi);
-        if (itemMatches) {
-            materials.push(...itemMatches);
+    /**
+     * Finds the most specific keyword in a given phrase.
+     * @param {string} phrase - A segment of the input text.
+     * @returns {Object} An object with the type and capitalized label.
+     */
+    findKeyword(phrase) {
+        const allKeywords = [...this.materialKeywords, ...this.activityKeywords];
+        allKeywords.sort((a, b) => b.length - a.length);
+
+        for (const keyword of allKeywords) {
+            if (phrase.includes(keyword)) {
+                const type = this.activityKeywords.includes(keyword) ? 'activity' : 'material';
+                return { type, label: this.capitalize(keyword) };
+            }
         }
-        return materials;
+        return { type: 'material', label: this.capitalize(phrase) };
     }
 
-    extractActivities(text) {
-        const activities = [];
-        this.patterns.activities.forEach(act => {
-            if (text.includes(act)) activities.push(act);
-        });
-        return activities;
+    /**
+     * The main parse method. Tries complex parsing first, then falls back to simple tokenization.
+     * @param {string} text - The natural language input from the user.
+     * @returns {Array<Object>} A list of structured steps or simple tokens.
+     */
+    parse(text) {
+        const movementSteps = this.parseMovement(text.toLowerCase());
+        if (movementSteps) {
+            return movementSteps;
+        }
+        return this.tokenize(text); // Fallback to simple tokenization
     }
 
-    extractFlows(text) {
-        const flows = [];
-        if (text.includes('from') && text.includes('to')) {
-            flows.push('from-to');
+    /**
+     * Simple tokenizer for sequential supply chain descriptions.
+     * @param {string} text - The user's input string.
+     * @returns {Array<Object>} A list of tokens.
+     */
+    tokenize(text) {
+        const words = text.toLowerCase().replace(/,/g, '').split(/\s+/);
+        const tokens = [];
+        let i = 0;
+
+        while (i < words.length) {
+            let quantity = 1;
+            if (this.quantityMap[words[i]] || !isNaN(parseInt(words[i]))) {
+                quantity = this.quantityMap[words[i]] || parseInt(words[i]);
+                i++;
+                if (i >= words.length) break;
+            }
+
+            let foundKeyword = false;
+            const allKeywords = [...this.materialKeywords, ...this.activityKeywords];
+            allKeywords.sort((a, b) => b.split(' ').length - a.split(' ').length);
+
+            for (const keyword of allKeywords) {
+                const keywordParts = keyword.split(' ');
+                if (words.slice(i, i + keywordParts.length).join(' ') === keyword) {
+                    const type = this.activityKeywords.includes(keyword) ? 'activity' : 'material';
+                    tokens.push({ type, label: this.capitalize(keyword), quantity });
+                    i += keywordParts.length;
+                    foundKeyword = true;
+                    break;
+                }
+            }
+            
+            if (!foundKeyword) {
+                i++;
+            }
         }
-        if (text.includes('between')) {
-            flows.push('between');
-        }
-        if (text.includes('then')) {
-            flows.push('then');
-        }
-        return flows;
+        return tokens;
+    }
+    
+    capitalize(s) {
+        if (!s) return '';
+        return s.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     }
 }
+
 
 class SupplyChainCanvas {
     constructor() {
@@ -164,7 +239,7 @@ class SupplyChainCanvas {
         this.resizeHandle = null;
         this.selectionBounds = null;
         this.stateManager = new StateManager();
-        this.nlpParser = new NLPParser();
+        this.nlpParser = new NLPParser(); // Use the new enhanced parser
         this.isRendering = false;
 
         this.sampleData = {
@@ -772,9 +847,10 @@ class SupplyChainCanvas {
     }
 
     canConnect(nodeA, nodeB) {
-        // Allow textboxes to connect with any element
-        if (nodeA.id === nodeB.id) return false; // Prevent self-connections
-        return true;
+        // Enforce alternating pattern for material and activity nodes
+        if (nodeA.id === nodeB.id) return false;
+        if (nodeA.type === 'textbox' || nodeB.type === 'textbox') return true;
+        return nodeA.type !== nodeB.type;
     }
 
     getNodeAt(x, y) {
@@ -976,21 +1052,26 @@ class SupplyChainCanvas {
     }
 
     wrapText(text, maxWidth) {
-        const words = text.split(' ');
-        const lines = [];
-        let currentLine = words[0] || '';
+        const manualLines = text.split('\n');
+        const finalLines = [];
 
-        for (let i = 1; i < words.length; i++) {
-            const testLine = currentLine + ' ' + words[i];
-            if (this.ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
-                lines.push(currentLine);
-                currentLine = words[i];
-            } else {
-                currentLine = testLine;
+        manualLines.forEach(manualLine => {
+            const words = manualLine.split(' ');
+            let currentLine = words[0] || '';
+
+            for (let i = 1; i < words.length; i++) {
+                const testLine = currentLine + ' ' + words[i];
+                if (this.ctx.measureText(testLine).width > maxWidth && currentLine !== '') {
+                    finalLines.push(currentLine);
+                    currentLine = words[i];
+                } else {
+                    currentLine = testLine;
+                }
             }
-        }
-        lines.push(currentLine);
-        return lines;
+            finalLines.push(currentLine);
+        });
+        
+        return finalLines;
     }
 
     drawConnections() {
@@ -1181,6 +1262,9 @@ class SupplyChainCanvas {
         document.getElementById('zoomLevel').textContent = `${Math.round(this.camera.zoom * 100)}%`;
     }
 
+    /**
+     * Main function to generate a diagram from a natural language description.
+     */
     generateFromNL() {
         const input = document.getElementById('nlInput').value.trim();
         if (!input) {
@@ -1195,31 +1279,100 @@ class SupplyChainCanvas {
         this.connectingFrom = null;
         this.nodeCounter = 0;
 
-        this.generateFromParsedData(input);
+        const result = this.nlpParser.parse(input);
+        if (!result || result.length === 0) {
+            this.showStatus('Could not understand the description. Please try different wording.', 'error');
+            this.undo();
+            return;
+        }
+
+        // Check if the parser returned structured steps or simple tokens
+        if (result[0].source && result[0].destination) {
+            this.buildDiagramFromSteps(result);
+        } else {
+            this.buildDiagramFromTokens(result);
+        }
+
         this.queueRender();
-        this.showStatus('Enhanced diagram generated from natural language!', 'success');
+        this.showStatus('Diagram generated from description!', 'success');
         document.getElementById('nlInput').value = '';
     }
 
-    generateFromParsedData(originalInput) {
-        const lowerInput = originalInput.toLowerCase();
-        if (lowerInput.includes('two raw materials') && lowerInput.includes('consumed in a bom to produce a finished good') && lowerInput.includes('distributed to a dc')) {
-            const rm1 = this.addNode('material', 100, 150, 'Raw Material 1');
-            const rm2 = this.addNode('material', 100, 300, 'Raw Material 2');
-            const prod = this.addNode('activity', 300, 225, 'Production');
-            const fg = this.addNode('material', 500, 225, 'Finished Good');
-            const dist = this.addNode('activity', 700, 225, 'Distribution');
-            const dc = this.addNode('material', 900, 225, 'Distribution Center');
+    /**
+     * Builds a diagram from structured movement steps.
+     * @param {Array<Object>} steps - The structured steps from the NLP parser.
+     */
+    buildDiagramFromSteps(steps) {
+        let lastNode = null;
+        let currentX = 150;
+        const xIncrement = 250;
+        const yPos = 250;
 
-            this.createConnectionDirect(rm1, prod);
-            this.createConnectionDirect(rm2, prod);
-            this.createConnectionDirect(prod, fg);
-            this.createConnectionDirect(fg, dist);
-            this.createConnectionDirect(dist, dc);
-        } else {
-            // Fallback for other patterns
+        for (const step of steps) {
+            const sourceLabel = `${step.material}\nat ${step.source}`;
+            const sourceNode = this.addNode('material', currentX, yPos, sourceLabel);
+
+            if (lastNode) {
+                this.createConnectionDirect(lastNode, sourceNode);
+            }
+
+            currentX += xIncrement;
+            const activityNode = this.addNode('activity', currentX, yPos, step.activity);
+            this.createConnectionDirect(sourceNode, activityNode);
+
+            currentX += xIncrement;
+            const destLabel = `${step.material}\nat ${step.destination}`;
+            const destNode = this.addNode('material', currentX, yPos, destLabel);
+            this.createConnectionDirect(activityNode, destNode);
+
+            lastNode = destNode;
         }
     }
+
+    /**
+     * Constructs the supply chain diagram step-by-step from simple parsed tokens.
+     * @param {Array<Object>} tokens - The sequence of parsed tokens from NLPParser.
+     */
+    buildDiagramFromTokens(tokens) {
+        let lastNodes = [];
+        let lastNodeType = null;
+        let currentX = 150;
+        const xIncrement = 200;
+        const yStart = 250;
+        const ySpacing = 120;
+
+        for (const token of tokens) {
+            if (lastNodeType && token.type === lastNodeType) {
+                console.warn(`Skipping token of type '${token.type}' to enforce alternating pattern.`);
+                continue;
+            }
+
+            const newNodes = [];
+            const yOffset = (token.quantity - 1) * ySpacing / 2;
+
+            for (let i = 0; i < token.quantity; i++) {
+                const yPos = yStart + (i * ySpacing) - yOffset;
+                const label = token.quantity > 1 ? `${token.label} ${i + 1}` : token.label;
+                const newNode = this.addNode(token.type, currentX, yPos, label);
+                newNodes.push(newNode);
+            }
+
+            if (lastNodes.length > 0) {
+                for (const fromNode of lastNodes) {
+                    for (const toNode of newNodes) {
+                         if (this.canConnect(fromNode, toNode)) {
+                            this.createConnectionDirect(fromNode, toNode);
+                         }
+                    }
+                }
+            }
+
+            lastNodes = newNodes;
+            lastNodeType = token.type;
+            currentX += xIncrement;
+        }
+    }
+
 
     createConnectionDirect(fromNode, toNode) {
         this.connections.push({ from: fromNode.id, to: toNode.id });
