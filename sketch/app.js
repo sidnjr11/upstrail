@@ -1555,7 +1555,7 @@ class SupplyChainCanvas {
 
         const link = document.createElement('a');
         link.setAttribute('href', dataUri);
-        link.setAttribute('download', `enhanced-supply-chain-${new Date().toISOString().split('T')[0]}.json`);
+        link.setAttribute('download', `supply-chain-diagram-${new Date().toISOString().split('T')[0]}.json`);
         link.click();
         this.showStatus('Diagram saved!', 'success');
     }
@@ -1589,7 +1589,7 @@ class SupplyChainCanvas {
 
     exportPNG() {
         const link = document.createElement('a');
-        link.download = `enhanced-supply-chain-${new Date().toISOString().split('T')[0]}.png`;
+        link.download = `supply-chain-diagram-${new Date().toISOString().split('T')[0]}.png`;
         link.href = this.canvas.toDataURL('image/png');
         link.click();
         this.showStatus('Diagram exported as PNG!', 'success');
