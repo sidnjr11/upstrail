@@ -4,42 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Upstrail – Free Supply Chain Tools</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary-color: #2e6edb;
-      --accent-color: #f9a826;
-      --background-color: #f0f4f8;
-      --text-color: #222;
-      --footer-color: #777;
-      --section-bg: #ffffff;
-      --nav-bg: #ffffff;
+      --primary-color: #3B82F6;
+      --accent-color: #F97316;
+      --background-color: #F3F4F6;
+      --text-color: #1F2937;
+      --footer-color: #6B7280;
+      --section-bg: #FFFFFF;
+      --nav-bg: #FFFFFF;
       --nav-height: 70px;
     }
 
     * { box-sizing: border-box; scroll-behavior: smooth; }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       margin: 0;
       padding: 0;
       padding-top: var(--nav-height);
       background: var(--background-color);
       color: var(--text-color);
-      line-height: 1.6;
+      line-height: 1.7;
     }
 
     /* --- TOP NAVIGATION BAR STYLES --- */
     .navbar {
       background-color: var(--nav-bg);
       height: var(--nav-height);
-      border-bottom: 1px solid #e0e0e0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      border-bottom: 1px solid #E5E7EB;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       position: fixed;
       top: 0;
       width: 100%;
       z-index: 1000;
       display: flex;
       justify-content: center;
+      transition: background-color 0.3s ease;
     }
 
     .nav-container {
@@ -48,8 +50,8 @@
       align-items: center;
       height: 100%;
       width: 100%;
-      max-width: 1200px;
-      padding: 0 20px;
+      max-width: 1280px;
+      padding: 0 24px;
     }
 
     .nav-logo a {
@@ -57,13 +59,18 @@
       align-items: center;
       text-decoration: none;
       color: var(--text-color);
-      font-weight: bold;
-      font-size: 1.5rem;
+      font-weight: 700;
+      font-size: 1.75rem;
     }
 
     .nav-logo img {
-      height: 40px;
-      margin-right: 10px;
+      height: 48px;
+      margin-right: 12px;
+      transition: transform 0.3s ease;
+    }
+    
+    .nav-logo:hover img {
+        transform: rotate(-10deg);
     }
 
     .nav-menu {
@@ -71,16 +78,16 @@
       list-style: none;
       margin: 0;
       padding: 0;
-      gap: 20px;
+      gap: 24px;
     }
 
     .nav-menu a {
-      color: #333;
+      color: #374151;
       text-decoration: none;
-      padding: 5px 10px;
-      font-weight: 500;
-      border-radius: 5px;
-      transition: background-color 0.3s ease, color 0.3s ease;
+      padding: 8px 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: all 0.3s ease;
     }
     
     .nav-menu a:hover, .nav-menu a.active {
@@ -89,46 +96,78 @@
     }
     /* --- END OF NAV STYLES --- */
 
-    .hero { text-align: center; padding: 60px 20px; background-color: var(--section-bg); }
-    .hero h2 { font-size: 2rem; margin-bottom: 20px; }
-    .hero p { font-size: 1.1rem; max-width: 700px; margin: 0 auto 30px; }
+    .hero { 
+        text-align: center; 
+        padding: 100px 24px; 
+        background: linear-gradient(135deg, #60A5FA, #3B82F6);
+        color: white;
+    }
+    .hero h2 { 
+        font-size: 3rem; 
+        margin-bottom: 24px; 
+        font-weight: 700;
+    }
+    .hero p { 
+        font-size: 1.25rem; 
+        max-width: 700px; 
+        margin: 0 auto 32px; 
+        opacity: 0.9;
+    }
 
     .button {
-      padding: 12px 24px; background-color: var(--accent-color); color: white;
-      text-decoration: none; border-radius: 6px; font-weight: bold;
-      font-size: 1rem; border: none; cursor: pointer; transition: background-color 0.3s ease;
+      padding: 14px 28px; background-color: var(--accent-color); color: white;
+      text-decoration: none; border-radius: 8px; font-weight: 600;
+      font-size: 1rem; border: none; cursor: pointer; 
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .button:hover { background-color: #d58a1a; }
+    .button:hover { 
+        background-color: #EA580C; 
+        transform: translateY(-3px);
+        box-shadow: 0 7px 10px rgba(0,0,0,0.15);
+    }
 
-    .features { display: flex; flex-wrap: wrap; justify-content: center; padding: 60px 20px; gap: 20px; background: var(--background-color); }
+    .features { display: flex; flex-wrap: wrap; justify-content: center; padding: 80px 24px; gap: 24px; background: var(--background-color); }
     .feature {
-      background: var(--section-bg); border-radius: 10px; padding: 30px; flex: 1 1 300px;
-      max-width: 350px; border: 1px solid #e3e6ea; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      background: var(--section-bg); border-radius: 12px; padding: 32px; flex: 1 1 320px;
+      max-width: 380px; border: 1px solid #E5E7EB; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
     }
-    .feature h3 { color: var(--primary-color); margin-top: 0; }
+    .feature:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    }
+    .feature h3 { color: var(--primary-color); margin-top: 0; font-weight: 700; font-size: 1.5rem; }
     
-    footer { text-align: center; padding: 20px; font-size: 0.9rem; color: var(--footer-color); margin-top: 40px; }
+    footer { text-align: center; padding: 24px; font-size: 0.9rem; color: var(--footer-color); margin-top: 40px; background: var(--section-bg); border-top: 1px solid #E5E7EB;}
 
     /* Modal Styling */
     .modal {
       display: none; position: fixed; z-index: 1001; left: 0; top: 0;
       width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);
+      animation: fadeIn 0.3s;
     }
     .modal-content {
-      background-color: #fff; margin: 10% auto; padding: 20px; border-radius: 8px;
-      width: 90%; max-width: 400px; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      background-color: #fff; margin: 10% auto; padding: 24px; border-radius: 12px;
+      width: 90%; max-width: 420px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
     }
-    .modal-content h2 { margin-top: 0; }
-    .modal-content input[type="email"] { width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ccc; border-radius: 5px; }
+    .modal-content h2 { margin-top: 0; font-weight: 700; }
+    .modal-content input[type="email"] { width: 100%; padding: 12px; margin: 16px 0; border: 1px solid #D1D5DB; border-radius: 8px; }
     .modal-content button {
-      width: 100%; padding: 10px; background-color: var(--primary-color); color: white;
-      border: none; border-radius: 5px; font-size: 1rem; cursor: pointer;
+      width: 100%; padding: 12px; background-color: var(--primary-color); color: white;
+      border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;
     }
-    .modal-content button:hover { background-color: #1c50b0; }
+    .modal-content button:hover { background-color: #2563EB; }
 
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
     @media (max-width: 768px) {
       .nav-menu { display: none; }
-      .hero h2 { font-size: 1.5rem; }
+      .hero h2 { font-size: 2.25rem; }
       .features { flex-direction: column; align-items: center; }
     }
   </style>
@@ -146,22 +185,22 @@
       <ul class="nav-menu">
         <li><a href="index.html" class="active">Home</a></li>
         <li><a href="downloads.html">Excel Tools</a></li>
-        <li><a href="sketch/index.html">Vision Modeler</a></li>
+        <li><a href="sketch/index.html">Supply Chain Canvas</a></li>
       </ul>
     </div>
   </nav>
 
   <main>
     <section class="hero">
-      <h2>Smarter Supply Chain Tools. Minimal Effort.</h2>
-      <p>Upstrail helps businesses optimize planning using Excel-based tools and light consulting — no heavy IT systems or long timelines required.</p>
-      <a href="downloads.html" class="button">Browse Tools</a>
+      <h2>Free Supply Chain Tools for Planners</h2>
+      <p>Upstrail is a project dedicated to providing free, open-source tools for supply chain planners. No heavy IT systems or long timelines required.</p>
+      <a href="downloads.html" class="button">Browse the Tools</a>
     </section>
 
     <section class="features">
       <div class="feature">
-        <h3>Instant Network Visualization</h3>
-        <p>Use our browser-based 'Vision' tool to drag-and-drop nodes, map flows, and understand complex networks in minutes, not hours.</p>
+        <h3>Supply Chain Canvas</h3>
+        <p>A fast way for planners, consultants, and APS configurators to draw supply chain diagrams. Use our browser-based tool to map flows and understand complex networks in minutes.</p>
       </div>
       <div class="feature">
         <h3>Free Excel Add-Ins</h3>
@@ -173,11 +212,11 @@
       </div>
     </section>
     
-    <section style="background: var(--section-bg); padding: 60px 40px; text-align: center; border-top: 1px solid #e3e6ea;">
-      <h3 style="color: var(--primary-color); font-size: 1.6rem; margin-bottom: 16px;">
+    <section style="background: var(--section-bg); padding: 80px 48px; text-align: center; border-top: 1px solid #e3e6ea;">
+      <h3 style="color: var(--primary-color); font-size: 2rem; margin-bottom: 16px; font-weight: 700;">
         Join the Community
       </h3>
-      <p style="font-size: 1rem; max-width: 700px; margin: 0 auto 24px; color: #444;">
+      <p style="font-size: 1.1rem; max-width: 700px; margin: 0 auto 24px; color: #4B5563;">
         Get notified when new tools, tutorials, and plugins are released. No spam, just updates.
       </p>
       <button class="button" onclick="openModal()">Get Notified</button>
@@ -193,7 +232,7 @@
   </div>
 
   <footer>
-    &copy; 2025 Upstrail. All rights reserved.
+    &copy; 2025 Upstrail. A community-driven project.
   </footer>
   
   <script>
