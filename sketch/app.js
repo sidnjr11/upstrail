@@ -185,6 +185,24 @@ class SupplyChainCanvas {
         this.updateDebugInfo();
         this.saveInitialState();
         this.queueRender();
+
+        // Global mouseup to always reset cursor and flags
+        document.addEventListener('mouseup', (e) => {
+            if (this.isPanning) {
+                this.isPanning = false;
+                if (this.currentTool === 'pan') {
+                    this.setTool('select');
+                }
+            }
+            if (this.isDraggingElement) {
+                this.isDraggingElement = false;
+                this.updateDragStatus('Ready');
+            }
+            if (this.isResizing) {
+                this.isResizing = false;
+            }
+            this.updateCanvasCursor();
+        });
     }
 
     saveInitialState() {
@@ -396,12 +414,33 @@ class SupplyChainCanvas {
 
     updateCanvasCursor() {
         const container = this.canvas.parentElement.parentElement;
-        container.className = container.className.replace(/tool-\w+/g, '');
-        if (this.currentTool === 'pan') this.canvas.style.cursor = 'grab';
-        else if (this.currentTool === 'connect') container.classList.add('tool-connect');
-        else if (this.currentTool === 'delete') container.classList.add('tool-delete');
-        else this.canvas.style.cursor = 'default';
-        if (this.isDraggingElement) container.classList.add('dragging');
+        // Clear all tool classes first
+        container.className = container.className.replace(/tool-\w+/g, '').replace(/dragging/g, '');
+        
+        // Reset to default first
+        this.canvas.style.cursor = 'default';
+        
+        // Then apply the appropriate cursor based on state
+        if (this.isPanning) {
+            this.canvas.style.cursor = 'grabbing';
+        } else if (this.isDraggingElement) {
+            this.canvas.style.cursor = 'move';
+            container.classList.add('dragging');
+        } else if (this.currentTool === 'pan') {
+            this.canvas.style.cursor = 'grab';
+        } else if (this.currentTool === 'connect') {
+            container.classList.add('tool-connect');
+        } else if (this.currentTool === 'delete') {
+            container.classList.add('tool-delete');
+        }
+        
+        // Debug cursor state
+        console.log('Cursor State:', {
+            isPanning: this.isPanning,
+            isDragging: this.isDraggingElement,
+            currentTool: this.currentTool,
+            cursor: this.canvas.style.cursor
+        });
     }
 
     updateStatusText() {
@@ -420,6 +459,11 @@ class SupplyChainCanvas {
 
     handleMouseDown(e) {
         this.hideContextMenu();
+        // Reset all interaction flags first
+        this.isPanning = false;
+        this.isDraggingElement = false;
+        this.isResizing = false;
+        
         const pos = this.getMousePos(e);
         const clickedNode = this.getNodeAt(pos.x, pos.y);
         const clickedHandle = this.getResizeHandleAt(pos.x, pos.y);
@@ -427,7 +471,7 @@ class SupplyChainCanvas {
         if (this.isCtrlPressed || this.currentTool === 'pan') {
             this.isPanning = true;
             this.panStart = { x: e.clientX, y: e.clientY };
-            this.canvas.style.cursor = 'grabbing';
+            this.updateCanvasCursor();
             return;
         }
 
@@ -562,26 +606,33 @@ class SupplyChainCanvas {
     }
 
     handleMouseUp(e) {
-        if (this.isPanning) {
-            this.isPanning = false;
-            if (this.currentTool === 'pan') {
-                this.setTool('select');
-            }
-            this.updateCanvasCursor();
-        }
+        // First reset all interaction states
+        const wasInteracting = this.isPanning || this.isDraggingElement || this.isResizing || this.isSelecting;
+        
+        this.isPanning = false;
+        this.isDraggingElement = false;
+        this.isResizing = false;
+        
         if (this.isSelecting) {
             this.isSelecting = false;
             this.selectNodesInRect();
             this.selectionRect = null;
             this.queueRender();
         }
-        if (this.isDraggingElement || this.isResizing) {
-            this.isDraggingElement = false;
-            this.isResizing = false;
-            if (this.selectedNodes.length > 0) this.saveState();
-            this.updateCanvasCursor();
-            this.updateDragStatus('Ready');
+        
+        if (wasInteracting && this.selectedNodes.length > 0) {
+            this.saveState();
         }
+        
+        if (this.currentTool === 'pan') {
+            this.setTool('select');
+        }
+        
+        this.updateDragStatus('Ready');
+        
+        // Force cursor update after ALL state changes
+        setTimeout(() => this.updateCanvasCursor(), 0);
+        this.updateCanvasCursor();
     }
 
     selectNodesInRect() {
@@ -602,6 +653,12 @@ class SupplyChainCanvas {
     handleRightClick(e) {
         e.preventDefault();
         e.stopPropagation();
+        
+        // Reset all interaction states
+        this.isPanning = false;
+        this.isDraggingElement = false;
+        this.isResizing = false;
+        
         if (this.isPanning) return;
         const pos = this.getMousePos(e);
         const clickedNode = this.getNodeAt(pos.x, pos.y);
@@ -614,6 +671,8 @@ class SupplyChainCanvas {
             this.deselectAll();
             this.showStatus('Right-click on elements for options.', 'info');
         }
+        // Ensure cursor is reset
+        this.updateCanvasCursor();
     }
 
     handleDoubleClick(e) {
@@ -1102,6 +1161,7 @@ class SupplyChainCanvas {
 
     hideContextMenu() {
         document.getElementById('contextMenu').classList.add('hidden');
+        this.updateCanvasCursor();
     }
 
     addConnectedMaterial() {
