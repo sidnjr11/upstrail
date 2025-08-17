@@ -131,6 +131,19 @@
     .tutorial-btn { background-color: var(--tutorial-btn-bg); }
     .tutorial-btn:hover { background-color: #059669; transform: translateY(-2px); }
 
+    .image-container {
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .footer-image {
+        max-width: 600px;
+        width: 100%;
+        height: auto;
+        border-radius: 12px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        border: 1px solid #E5E7EB;
+    }
 
     @media (max-width: 768px) {
       .nav-menu { display: none; }
@@ -191,11 +204,16 @@
     </div>
   </div>
   
-  <footer style="background: var(--background-color); padding: 40px 20px; text-align: center; color: var(--footer-color); font-size: 0.9rem;">
+  <div class="image-container">
+    <h2 style="color: #3B82F6; font-weight: 700; margin-bottom: 20px;">Plugins Network</h2>
+    <p style="max-width: 800px; margin: 0 auto 30px; color: #4B5563;">The Upstrail plugins are designed to work in sync to give you the best results. Use the 'Forecast Pro' to generate a demand forecast, feed that into the 'Reorder Quantity Suggestor' to calculate your reorder points, and then use the 'Dead Stock Tracker' to identify any slow-moving inventory. This creates a seamless workflow for your planning process.</p>
+    <img src="plugins.png" alt="Upstrail Excel Plugins Network" class="footer-image">
+  </div>
+
+  <footer style="background: var(--background-color); padding: 40px 20px; text-align: center; color: var(--footer-color); font-size: 0.9rem; border-top: 1px solid #e3e6ea;">
     &copy; 2025 Upstrail. A community-driven project for planners.
   </footer>
 </main>
 
 </body>
-
 </html>
