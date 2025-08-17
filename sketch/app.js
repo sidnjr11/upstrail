@@ -662,8 +662,9 @@ class SupplyChainCanvas {
     }
 
     canConnect(nodeA, nodeB) {
-        if (nodeA.type === 'textbox' || nodeB.type === 'textbox') return false;
-        return nodeA.type !== nodeB.type;
+        // Allow textboxes to connect with any element
+        if (nodeA.id === nodeB.id) return false; // Prevent self-connections
+        return true;
     }
 
     getNodeAt(x, y) {
