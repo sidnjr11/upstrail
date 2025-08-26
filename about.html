@@ -94,11 +94,21 @@
     }
     h1 { color: #3B82F6; font-size: 2.5rem; font-weight: 700; }
 
+    .contact-container {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin: 40px auto;
+      max-width: 1200px;
+    }
+
     .contact-card {
-      background: white; max-width: 800px; margin: 40px auto; padding: 32px;
+      background: white; max-width: 400px; padding: 32px;
       border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
       border-left: 6px solid #F97316;
       transition: all 0.3s ease;
+      flex: 1;
     }
     
     .contact-card:hover {
@@ -111,6 +121,10 @@
     
     @media (max-width: 768px) {
       .nav-menu { display: none; }
+      .contact-container {
+        flex-direction: column;
+        align-items: center;
+      }
     }
   </style>
 </head>
@@ -138,16 +152,18 @@
     <h1>About Us</h1>
   </header>
 
-  <div class="contact-card">
-    <h2>Siddharth Gupta</h2>
-    <p>Supply chain enthusiast with 4+ years of experience in implementing large advanced planning solutions at large-scale businesses.</p>
-    <p>siddharth@upstrail.com</p>
-  </div>
+  <div class="contact-container">
+    <div class="contact-card">
+      <h2>Siddharth Gupta</h2>
+      <p>Supply chain enthusiast with 4+ years of experience in implementing large advanced planning solutions at large-scale businesses.</p>
+      <p>siddharth@upstrail.com</p>
+    </div>
 
-  <div class="contact-card">
-    <h2>Parakh Chaudhary</h2>
-    <p>AI/ML enthusiast who builds intelligent systems that learn and adapt. Full-stack engineer with experience in Python, React, and AWS.</p>
-    <p>parakh@upstrail.com</p>
+    <div class="contact-card">
+      <h2>Parakh Chaudhary</h2>
+      <p>AI/ML enthusiast who builds intelligent systems that learn and adapt. Full-stack engineer with experience in Python, React, and AWS.</p>
+      <p>parakh@upstrail.com</p>
+    </div>
   </div>
 </main>
 
