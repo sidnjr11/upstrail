@@ -244,11 +244,11 @@ class SupplyChainCanvas {
 
         this.sampleData = {
             nodes: [
-                {id: "m1", type: "material", label: "Raw Materials", x: 100, y: 150, shape: "triangle"},
-                {id: "a1", type: "activity", label: "Manufacturing", x: 250, y: 150, shape: "circle"},
-                {id: "m2", type: "material", label: "Finished Goods", x: 400, y: 150, shape: "triangle"},
+                {id: "m1", type: "material", label: "RM1, Plant", x: 100, y: 150, shape: "triangle"},
+                {id: "a1", type: "activity", label: "BOM", x: 250, y: 150, shape: "circle"},
+                {id: "m2", type: "material", label: "FG1, Plant", x: 400, y: 150, shape: "triangle"},
                 {id: "a2", type: "activity", label: "Distribution", x: 550, y: 150, shape: "circle"},
-                {id: "m3", type: "material", label: "Retail Store", x: 700, y: 150, shape: "triangle"}
+                {id: "m3", type: "material", label: "FG1, DC", x: 700, y: 150, shape: "triangle"}
             ],
             connections: [
                 {from: "m1", to: "a1"}, {from: "a1", to: "m2"}, {from: "m2", to: "a2"}, {from: "a2", to: "m3"}
