@@ -257,6 +257,7 @@ class SupplyChainCanvas {
 
         this.initEventListeners();
         this.setupDragAndDrop();
+        this.initTheme();
         this.updateDebugInfo();
         this.saveInitialState();
         this.queueRender();
@@ -368,6 +369,10 @@ class SupplyChainCanvas {
     }
 
     initEventListeners() {
+        // Theme toggle button (added in index.html)
+        const themeBtn = document.getElementById('themeToggleBtn');
+        if (themeBtn) themeBtn.addEventListener('click', () => this.toggleTheme());
+
         document.getElementById('panTool').addEventListener('click', () => this.setTool('pan'));
         document.getElementById('connectTool').addEventListener('click', () => this.setTool('connect'));
         document.getElementById('deleteTool').addEventListener('click', () => this.setTool('delete'));
@@ -467,6 +472,11 @@ class SupplyChainCanvas {
                 this.deselectAll(); 
                 this.setTool('select'); 
                 break;
+        }
+
+        // Quick theme toggle when pressing 'T' (not while typing)
+        if (!e.ctrlKey && !e.metaKey && e.key && e.key.toLowerCase() === 't') {
+            this.toggleTheme();
         }
     }
 
@@ -930,7 +940,7 @@ class SupplyChainCanvas {
 
     drawGrid() {
         this.ctx.save();
-        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        this.ctx.strokeStyle = this.themeColors && this.themeColors.grid ? this.themeColors.grid : 'rgba(0, 0, 0, 0.1)';
         this.ctx.lineWidth = 1 / this.camera.zoom;
 
         const gridSize = 20;
@@ -976,7 +986,7 @@ class SupplyChainCanvas {
     drawConnectionPreview() {
         if (this.currentTool === 'connect' && this.connectingFrom) {
             this.ctx.save();
-            this.ctx.strokeStyle = '#007bff';
+            this.ctx.strokeStyle = this.themeColors.primary || '#007bff';
             this.ctx.lineWidth = 2 / this.camera.zoom;
             this.ctx.setLineDash([5 / this.camera.zoom, 5 / this.camera.zoom]);
             this.ctx.beginPath();
@@ -1001,16 +1011,15 @@ class SupplyChainCanvas {
     }
 
     drawTextBox(node, isSelected) {
-        this.ctx.strokeStyle = '#000000';
+        this.ctx.strokeStyle = this.themeColors.text || '#000000';
         this.ctx.lineWidth = (isSelected ? 3 : 2) / this.camera.zoom;
         if (isSelected) { 
-            this.ctx.shadowColor = '#000000'; 
+            this.ctx.shadowColor = this.themeColors.text || '#000000'; 
             this.ctx.shadowBlur = 10; 
         }
         this.ctx.strokeRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
         this.ctx.shadowBlur = 0;
-
-        this.ctx.fillStyle = '#000000';
+        this.ctx.fillStyle = this.themeColors.text || '#000000';
         this.ctx.font = `${node.fontSize}px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
@@ -1022,10 +1031,12 @@ class SupplyChainCanvas {
     }
 
     drawRegularNode(node, isSelected, isConnecting) {
-        this.ctx.fillStyle = node.type === 'material' ? 
-            (isSelected || isConnecting ? '#21808d' : '#1fb8cd') : 
-            (isSelected || isConnecting ? '#d45b3a' : '#ffc185');
-        this.ctx.strokeStyle = node.type === 'material' ? '#127681' : '#b4413c';
+        const matFill = this.themeColors.nodeMaterialFill || '#1fb8cd';
+        const actFill = this.themeColors.nodeActivityFill || '#ffc185';
+        const matStroke = this.themeColors.nodeMaterialStroke || '#127681';
+        const actStroke = this.themeColors.nodeActivityStroke || '#b4413c';
+        this.ctx.fillStyle = node.type === 'material' ? (isSelected || isConnecting ? matFill : matFill) : (isSelected || isConnecting ? actFill : actFill);
+        this.ctx.strokeStyle = node.type === 'material' ? matStroke : actStroke;
         this.ctx.lineWidth = (isSelected || isConnecting ? 3 : 2) / this.camera.zoom;
 
         if (isSelected || isConnecting) { 
@@ -1040,7 +1051,7 @@ class SupplyChainCanvas {
         this.ctx.stroke();
         this.ctx.shadowBlur = 0;
 
-        this.ctx.fillStyle = '#13343b';
+        this.ctx.fillStyle = this.themeColors.text || '#13343b';
         this.ctx.font = '12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif';
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
@@ -1105,14 +1116,14 @@ class SupplyChainCanvas {
         const adjToY = toY - nodeRadius * Math.sin(angle);
 
         this.ctx.save();
-        this.ctx.strokeStyle = '#626c71';
+        this.ctx.strokeStyle = this.themeColors.arrow || '#626c71';
         this.ctx.lineWidth = 2 / this.camera.zoom;
         this.ctx.beginPath();
         this.ctx.moveTo(adjFromX, adjFromY);
         this.ctx.lineTo(adjToX, adjToY);
         this.ctx.stroke();
 
-        this.ctx.fillStyle = '#626c71';
+        this.ctx.fillStyle = this.themeColors.arrow || '#626c71';
         this.ctx.beginPath();
         this.ctx.moveTo(adjToX, adjToY);
         this.ctx.lineTo(adjToX - headLength * Math.cos(angle - Math.PI / 6), adjToY - headLength * Math.sin(angle - Math.PI / 6));
@@ -1260,6 +1271,48 @@ class SupplyChainCanvas {
 
     updateZoomDisplay() {
         document.getElementById('zoomLevel').textContent = `${Math.round(this.camera.zoom * 100)}%`;
+    }
+
+    // Theme handling: read CSS variables and apply to canvas rendering
+    initTheme() {
+        const saved = localStorage.getItem('scc-theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        this.theme = saved || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-color-scheme', this.theme);
+        const label = document.getElementById('themeToggleLabel');
+        if (label) label.textContent = this.theme === 'dark' ? 'Day' : 'Night';
+        this.buildThemeColors();
+    }
+
+    toggleTheme() {
+        this.theme = this.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-color-scheme', this.theme);
+        localStorage.setItem('scc-theme', this.theme);
+        const label = document.getElementById('themeToggleLabel');
+        if (label) label.textContent = this.theme === 'dark' ? 'Day' : 'Night';
+        this.buildThemeColors();
+        this.queueRender();
+        this.showStatus(`${this.theme === 'dark' ? 'Night' : 'Day'} mode enabled`, 'info');
+    }
+
+    buildThemeColors() {
+        const s = getComputedStyle(document.documentElement);
+        const read = (name) => s.getPropertyValue(name).trim() || null;
+        this.themeColors = {
+            primary: read('--color-primary') || '#1fb8cd',
+            primaryText: read('--color-btn-primary-text') || '#FFFFFF',
+            nodeMaterialFill: read('--color-success') || '#1fb8cd',
+            nodeActivityFill: read('--color-warning') || '#ffc185',
+            nodeMaterialStroke: read('--color-primary') || '#127681',
+            nodeActivityStroke: read('--color-error') || '#b4413c',
+            text: read('--color-text') || '#13343b',
+            textSecondary: read('--color-text-secondary') || '#626c71',
+            grid: read('--color-border') || 'rgba(0,0,0,0.08)',
+            arrow: read('--color-info') || '#626c71',
+            canvasSurface: read('--color-surface') || '#ffffff'
+        };
+        // Ensure proper defaults for transparency tokens
+        if (!this.copySettings.backgroundColor) this.copySettings.backgroundColor = this.themeColors.canvasSurface;
     }
 
     /**
@@ -1723,7 +1776,7 @@ class SupplyChainCanvas {
         const adjToY = toNode.y - nodeRadius * Math.sin(angle);
         
         ctx.save();
-        ctx.strokeStyle = '#626c71';
+        ctx.strokeStyle = this.themeColors && this.themeColors.arrow ? this.themeColors.arrow : '#626c71';
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -1735,7 +1788,7 @@ class SupplyChainCanvas {
         ctx.stroke();
         
         // Draw arrowhead
-        ctx.fillStyle = '#626c71';
+        ctx.fillStyle = this.themeColors && this.themeColors.arrow ? this.themeColors.arrow : '#626c71';
         ctx.beginPath();
         ctx.moveTo(adjToX, adjToY);
         ctx.lineTo(
@@ -1768,16 +1821,16 @@ class SupplyChainCanvas {
     // Helper method to draw textboxes for export
     drawTextBoxForExport(ctx, node) {
         // Draw textbox border
-        ctx.strokeStyle = '#000000';
+        ctx.strokeStyle = this.themeColors && this.themeColors.text ? this.themeColors.text : '#000000';
         ctx.lineWidth = 2;
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = this.themeColors && this.themeColors.canvasSurface ? this.themeColors.canvasSurface : '#ffffff';
         
         // Draw rectangle
         ctx.fillRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
         ctx.strokeRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
         
         // Draw text
-        ctx.fillStyle = '#000000';
+        ctx.fillStyle = this.themeColors && this.themeColors.text ? this.themeColors.text : '#000000';
         ctx.font = `${node.fontSize}px Arial, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -1796,8 +1849,12 @@ class SupplyChainCanvas {
     drawRegularNodeForExport(ctx, node) {
         // Set colors based on node type
         const isMaterial = node.type === 'material';
-        ctx.fillStyle = isMaterial ? '#1fb8cd' : '#ffc185';
-        ctx.strokeStyle = isMaterial ? '#127681' : '#b4413c';
+        const matFill = this.themeColors && this.themeColors.nodeMaterialFill ? this.themeColors.nodeMaterialFill : '#1fb8cd';
+        const actFill = this.themeColors && this.themeColors.nodeActivityFill ? this.themeColors.nodeActivityFill : '#ffc185';
+        const matStroke = this.themeColors && this.themeColors.nodeMaterialStroke ? this.themeColors.nodeMaterialStroke : '#127681';
+        const actStroke = this.themeColors && this.themeColors.nodeActivityStroke ? this.themeColors.nodeActivityStroke : '#b4413c';
+        ctx.fillStyle = isMaterial ? matFill : actFill;
+        ctx.strokeStyle = isMaterial ? matStroke : actStroke;
         ctx.lineWidth = 2;
         
         // Draw node shape
@@ -1811,7 +1868,7 @@ class SupplyChainCanvas {
         ctx.stroke();
         
         // Draw label
-        ctx.fillStyle = '#13343b';
+        ctx.fillStyle = this.themeColors && this.themeColors.text ? this.themeColors.text : '#13343b';
         ctx.font = '12px Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
