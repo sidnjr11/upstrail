@@ -1245,3 +1245,26 @@ select.form-control {
     min-width: 40px;
     text-align: center;
 }
+
+/* Ensure sidebar elements are readable in manual dark mode */
+[data-color-scheme="dark"] .sidebar,
+[data-color-scheme="dark"] .sidebar * {
+  color: var(--color-text) !important;
+}
+
+[data-color-scheme="dark"] .sidebar {
+  background-color: var(--color-surface) !important;
+  border-right: 1px solid var(--color-border) !important;
+}
+
+[data-color-scheme="dark"] .sidebar .tool-btn {
+  background-color: var(--color-background) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+[data-color-scheme="dark"] .sidebar .tool-btn .tool-icon,
+[data-color-scheme="dark"] .sidebar .tool-btn span,
+[data-color-scheme="dark"] .drag-hint {
+  color: var(--color-text) !important;
+}
