@@ -1792,6 +1792,9 @@ class SupplyChainCanvas {
         const bounds = this.getSelectionBounds();
         if (!bounds) return;
 
+        // Hide context menu immediately so the user sees feedback
+        this.hideContextMenu();
+
         // Create a temporary canvas with padding
         const tempCanvas = document.createElement('canvas');
         const padding = this.copySettings.padding;
@@ -1836,13 +1839,17 @@ class SupplyChainCanvas {
                 const item = new ClipboardItem({ 'image/png': blob });
                 navigator.clipboard.write([item]).then(() => {
                     this.showStatus(`Copied ${this.selectedNodes.length} element(s) to clipboard for Excel`, 'success');
+                    // ensure context menu hidden in case it was re-opened
+                    this.hideContextMenu();
                 }).catch(err => {
                     console.error('Failed to copy to clipboard:', err);
                     this.showStatus('Failed to copy to clipboard. Try using a supported browser.', 'error');
+                    this.hideContextMenu();
                 });
             } catch (err) {
                 console.error('Failed to create clipboard item:', err);
                 this.showStatus('Clipboard API not supported in this browser', 'error');
+                this.hideContextMenu();
             }
         }, 'image/png', 1.0);
     }
