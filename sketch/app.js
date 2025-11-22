@@ -1753,11 +1753,89 @@ class SupplyChainCanvas {
     }
 
     exportPNG() {
-        const link = document.createElement('a');
-        link.download = `supply-chain-diagram-${new Date().toISOString().split('T')[0]}.png`;
-        link.href = this.canvas.toDataURL('image/png');
-        link.click();
-        this.showStatus('Diagram exported as PNG!', 'success');
+        // Render the full canvas to an offscreen high-res canvas using the day/light theme
+        const exportColors = this.getThemeColorsForScheme('light') || this.themeColors || {};
+
+        // Create offscreen canvas
+        const scaleFactor = 2; // export at higher resolution
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = Math.max(1, Math.floor(this.canvas.width * scaleFactor));
+        tempCanvas.height = Math.max(1, Math.floor(this.canvas.height * scaleFactor));
+        const tctx = tempCanvas.getContext('2d');
+
+        // High-res scaling
+        tctx.scale(scaleFactor, scaleFactor);
+
+        // Fill background using export colors
+        tctx.fillStyle = exportColors.canvasSurface || '#ffffff';
+        tctx.fillRect(0, 0, tempCanvas.width / scaleFactor, tempCanvas.height / scaleFactor);
+
+        // Apply camera transform to match on-screen view
+        tctx.translate(this.camera.x, this.camera.y);
+        tctx.scale(this.camera.zoom, this.camera.zoom);
+
+        // Draw grid using export colors
+        this.drawGridForExport(tctx, exportColors);
+
+        // Draw connections
+        this.connections.forEach(conn => {
+            const fromNode = this.nodes.find(n => n.id === conn.from);
+            const toNode = this.nodes.find(n => n.id === conn.to);
+            if (fromNode && toNode) this.drawConnectionForExport(tctx, fromNode, toNode, exportColors);
+        });
+
+        // Draw nodes
+        this.nodes.forEach(node => this.drawNodeForExport(tctx, node, exportColors));
+
+        // Trigger download
+        tempCanvas.toBlob(blob => {
+            if (!blob) {
+                this.showStatus('Failed to export PNG', 'error');
+                return;
+            }
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `supply-chain-diagram-${new Date().toISOString().split('T')[0]}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            this.showStatus('Diagram exported as PNG!', 'success');
+        }, 'image/png', 1.0);
+    }
+
+    // Draw grid for export using explicit colors map
+    drawGridForExport(ctx, colors = null) {
+        const theme = colors || this.themeColors || {};
+        ctx.save();
+        ctx.strokeStyle = theme.grid || (this.themeColors && this.themeColors.grid) || 'rgba(0, 0, 0, 0.08)';
+        ctx.lineWidth = 1;
+
+        const gridSize = 20;
+        const left = -this.camera.x / this.camera.zoom;
+        const top = -this.camera.y / this.camera.zoom;
+        const right = (this.canvas.width - this.camera.x) / this.camera.zoom;
+        const bottom = (this.canvas.height - this.camera.y) / this.camera.zoom;
+
+        const startX = Math.floor(left / gridSize) * gridSize;
+        const startY = Math.floor(top / gridSize) * gridSize;
+
+        for (let x = startX; x < right; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, top);
+            ctx.lineTo(x, bottom);
+            ctx.stroke();
+        }
+
+        for (let y = startY; y < bottom; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(left, y);
+            ctx.lineTo(right, y);
+            ctx.stroke();
+        }
+
+        ctx.restore();
     }
 
     showStatus(message, type = 'info') {
@@ -1836,19 +1914,8 @@ class SupplyChainCanvas {
         // Scale for high resolution
         tempCtx.scale(scaleFactor, scaleFactor);
         
-        // Force export colors to light theme so copied image looks like day mode
+        // Use explicit light-theme colors for export so copied image matches day mode visuals
         const exportColors = this.getThemeColorsForScheme('light') || {};
-        // Ensure critical color tokens are set to readable day-mode values
-        // (override any unexpected values coming from CSS/resolution)
-        Object.assign(exportColors, {
-            text: '#13343b',
-            canvasSurface: '#ffffff',
-            nodeMaterialFill: '#1fb8cd',
-            nodeActivityFill: '#ffc185',
-            nodeMaterialStroke: '#127681',
-            nodeActivityStroke: '#b4413c',
-            arrow: '#626c71'
-        });
         // Set white/background (no transparency) according to light theme
         tempCtx.fillStyle = exportColors.canvasSurface || this.copySettings.backgroundColor;
         tempCtx.fillRect(0, 0, tempCanvas.width / scaleFactor, tempCanvas.height / scaleFactor);
