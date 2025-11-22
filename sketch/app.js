@@ -679,6 +679,24 @@ class SupplyChainCanvas {
         const input = document.getElementById('editInput');
         document.querySelector('#editModal h3').textContent = 'Edit Text Content';
         input.value = node.label === 'Click to edit text' ? '' : node.label;
+        // Size the textarea to match node dimensions
+        if (node.width) input.style.width = `${node.width}px`;
+        if (node.height) input.style.height = `${node.height}px`;
+        // Attach live input handler to update the node while editing
+        this._editInputHandler = (e) => {
+            const newContent = e.target.value;
+            if (this.editingNode) {
+                this.editingNode.label = newContent === '' ? 'Click to edit text' : newContent;
+                const dims = this.computeTextBoxDimensions(this.editingNode.label, this.editingNode.fontSize || 12);
+                this.editingNode.width = dims.width;
+                this.editingNode.height = dims.height;
+                // update modal size to reflect changes
+                input.style.width = `${this.editingNode.width}px`;
+                input.style.height = `${this.editingNode.height}px`;
+                this.queueRender();
+            }
+        };
+        input.addEventListener('input', this._editInputHandler);
         modal.classList.remove('hidden');
         setTimeout(() => { input.focus(); input.select(); }, 10);
         this.queueRender();
@@ -822,6 +840,10 @@ class SupplyChainCanvas {
             node.width = 120; 
             node.height = 40; 
             node.fontSize = 12; 
+            // Compute size to fit label
+            const dims = this.computeTextBoxDimensions(node.label, node.fontSize);
+            node.width = dims.width;
+            node.height = dims.height;
         }
         this.nodes.push(node);
         this.selectedNodes = [node];
@@ -1505,18 +1527,43 @@ class SupplyChainCanvas {
 
     saveEdit() {
         if (this.editingNode) {
-            const newContent = document.getElementById('editInput').value.trim();
-            if (newContent) {
+            const input = document.getElementById('editInput');
+            const newContent = input.value.trim();
+            // Always apply (allow empty to become placeholder)
+            const finalContent = newContent === '' ? 'Click to edit text' : newContent;
+            // Compute new dimensions for textbox nodes
+            if (this.editingNode.type === 'textbox') {
+                const fontSize = this.editingNode.fontSize || 12;
+                const dims = this.computeTextBoxDimensions(finalContent, fontSize);
                 this.saveState();
-                this.editingNode.label = newContent;
+                this.editingNode.label = finalContent;
+                this.editingNode.width = dims.width;
+                this.editingNode.height = dims.height;
                 this.showStatus(`Updated content`, 'success');
                 this.queueRender();
+            } else {
+                if (finalContent) {
+                    this.saveState();
+                    this.editingNode.label = finalContent;
+                    this.showStatus(`Updated content`, 'success');
+                    this.queueRender();
+                }
+            }
+            // Remove live handler if present
+            if (this._editInputHandler) {
+                input.removeEventListener('input', this._editInputHandler);
+                this._editInputHandler = null;
             }
         }
         this.cancelEdit();
     }
 
     cancelEdit() {
+        const input = document.getElementById('editInput');
+        if (this._editInputHandler && input) {
+            input.removeEventListener('input', this._editInputHandler);
+            this._editInputHandler = null;
+        }
         document.getElementById('editModal').classList.add('hidden');
         this.editingNode = null;
     }
@@ -1911,6 +1958,32 @@ class SupplyChainCanvas {
         }
         lines.push(currentLine);
         return lines;
+    }
+
+    // Compute width/height for a textbox given its text and font size.
+    computeTextBoxDimensions(text, fontSize = 12, maxWidth = 420) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const font = `${fontSize}px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
+        ctx.font = font;
+
+        // Break into manual lines, then wrap each according to maxWidth
+        const manualLines = text.split('\n');
+        const padding = 10; // internal padding left/right
+        let measuredMax = 0;
+        let totalLines = 0;
+
+        for (const manual of manualLines) {
+            const lines = this.wrapTextForExport(ctx, manual, maxWidth - padding * 2);
+            totalLines += lines.length;
+            for (const l of lines) measuredMax = Math.max(measuredMax, ctx.measureText(l).width);
+        }
+
+        const finalWidth = Math.max(80, Math.min(maxWidth, Math.ceil(measuredMax + padding * 2)));
+        const lineHeight = fontSize + 2;
+        const finalHeight = Math.max(28, Math.ceil(totalLines * lineHeight + padding * 2));
+
+        return { width: finalWidth, height: finalHeight, lineHeight, lines: totalLines };
     }
 }
 
