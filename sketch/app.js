@@ -1353,6 +1353,34 @@ class SupplyChainCanvas {
         if (!this.copySettings.backgroundColor) this.copySettings.backgroundColor = this.themeColors.canvasSurface;
     }
 
+    // Read theme CSS variables for a specific scheme ('light' or 'dark') without permanently changing UI
+    getThemeColorsForScheme(scheme = 'light') {
+        const el = document.documentElement;
+        const prev = el.getAttribute('data-color-scheme');
+        try {
+            el.setAttribute('data-color-scheme', scheme);
+            const s = getComputedStyle(document.documentElement);
+            const read = (name) => s.getPropertyValue(name).trim() || null;
+            const colors = {
+                primary: read('--color-primary') || '#1fb8cd',
+                primaryText: read('--color-btn-primary-text') || '#FFFFFF',
+                nodeMaterialFill: read('--color-success') || '#1fb8cd',
+                nodeActivityFill: read('--color-warning') || '#ffc185',
+                nodeMaterialStroke: read('--color-primary') || '#127681',
+                nodeActivityStroke: read('--color-error') || '#b4413c',
+                text: read('--color-text') || '#13343b',
+                textSecondary: read('--color-text-secondary') || '#626c71',
+                grid: read('--color-border') || 'rgba(0,0,0,0.08)',
+                arrow: read('--color-info') || '#626c71',
+                canvasSurface: read('--color-surface') || '#ffffff'
+            };
+            return colors;
+        } finally {
+            if (prev) el.setAttribute('data-color-scheme', prev);
+            else el.removeAttribute('data-color-scheme');
+        }
+    }
+
     /**
      * Main function to generate a diagram from a natural language description.
      */
@@ -1808,8 +1836,10 @@ class SupplyChainCanvas {
         // Scale for high resolution
         tempCtx.scale(scaleFactor, scaleFactor);
         
-        // Set white background (no transparency)
-        tempCtx.fillStyle = this.copySettings.backgroundColor;
+        // Force export colors to light theme so copied image looks like day mode
+        const exportColors = this.getThemeColorsForScheme('light');
+        // Set white/background (no transparency) according to light theme
+        tempCtx.fillStyle = exportColors.canvasSurface || this.copySettings.backgroundColor;
         tempCtx.fillRect(0, 0, tempCanvas.width / scaleFactor, tempCanvas.height / scaleFactor);
         
         // Set up transform for drawing (translate to center the selection with padding)
@@ -1824,13 +1854,13 @@ class SupplyChainCanvas {
             if (fromNode && toNode && 
                 this.selectedNodes.includes(fromNode) && 
                 this.selectedNodes.includes(toNode)) {
-                this.drawConnectionForExport(tempCtx, fromNode, toNode);
+                this.drawConnectionForExport(tempCtx, fromNode, toNode, exportColors);
             }
         });
         
         // Draw nodes
         this.selectedNodes.forEach(node => {
-            this.drawNodeForExport(tempCtx, node);
+            this.drawNodeForExport(tempCtx, node, exportColors);
         });
         
         // Copy to clipboard
@@ -1855,7 +1885,7 @@ class SupplyChainCanvas {
     }
 
     // Helper method to draw connections for export
-    drawConnectionForExport(ctx, fromNode, toNode) {
+    drawConnectionForExport(ctx, fromNode, toNode, colors = null) {
         const headLength = 12;
         const angle = Math.atan2(toNode.y - fromNode.y, toNode.x - fromNode.x);
         const nodeRadius = 30;
@@ -1866,8 +1896,9 @@ class SupplyChainCanvas {
         const adjToX = toNode.x - nodeRadius * Math.cos(angle);
         const adjToY = toNode.y - nodeRadius * Math.sin(angle);
         
+        const theme = colors || this.themeColors || {};
         ctx.save();
-        ctx.strokeStyle = this.themeColors && this.themeColors.arrow ? this.themeColors.arrow : '#626c71';
+        ctx.strokeStyle = theme.arrow || (this.themeColors && this.themeColors.arrow) || '#626c71';
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -1879,7 +1910,7 @@ class SupplyChainCanvas {
         ctx.stroke();
         
         // Draw arrowhead
-        ctx.fillStyle = this.themeColors && this.themeColors.arrow ? this.themeColors.arrow : '#626c71';
+        ctx.fillStyle = theme.arrow || (this.themeColors && this.themeColors.arrow) || '#626c71';
         ctx.beginPath();
         ctx.moveTo(adjToX, adjToY);
         ctx.lineTo(
@@ -1896,58 +1927,61 @@ class SupplyChainCanvas {
         ctx.restore();
     }
 
-    // Helper method to draw nodes for export
-    drawNodeForExport(ctx, node) {
+    // Helper method to draw nodes for export (accept explicit colors map)
+    drawNodeForExport(ctx, node, colors = null) {
         ctx.save();
-        
+        const theme = colors || this.themeColors || {};
+
         if (node.type === 'textbox') {
-            this.drawTextBoxForExport(ctx, node);
+            this.drawTextBoxForExport(ctx, node, theme);
         } else {
-            this.drawRegularNodeForExport(ctx, node);
+            this.drawRegularNodeForExport(ctx, node, theme);
         }
-        
+
         ctx.restore();
     }
 
-    // Helper method to draw textboxes for export
-    drawTextBoxForExport(ctx, node) {
+    // Helper method to draw textboxes for export (accept explicit colors map)
+    drawTextBoxForExport(ctx, node, colors = null) {
+        const theme = colors || this.themeColors || {};
         // Draw textbox border
-        ctx.strokeStyle = this.themeColors && this.themeColors.text ? this.themeColors.text : '#000000';
+        ctx.strokeStyle = theme.text || (this.themeColors && this.themeColors.text) || '#000000';
         ctx.lineWidth = 2;
-        ctx.fillStyle = this.themeColors && this.themeColors.canvasSurface ? this.themeColors.canvasSurface : '#ffffff';
-        
+        ctx.fillStyle = theme.canvasSurface || (this.themeColors && this.themeColors.canvasSurface) || '#ffffff';
+
         // Draw rectangle
         ctx.fillRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
         ctx.strokeRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
-        
+
         // Draw text
-        ctx.fillStyle = this.themeColors && this.themeColors.text ? this.themeColors.text : '#000000';
+        ctx.fillStyle = theme.text || (this.themeColors && this.themeColors.text) || '#000000';
         ctx.font = `${node.fontSize}px Arial, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
+
         // Handle text wrapping
         const lines = this.wrapTextForExport(ctx, node.label, node.width - 10);
         const lineHeight = node.fontSize + 2;
         const startY = node.y - (lines.length - 1) * lineHeight / 2;
-        
+
         lines.forEach((line, index) => {
             ctx.fillText(line, node.x, startY + index * lineHeight);
         });
     }
 
-    // Helper method to draw regular nodes for export
-    drawRegularNodeForExport(ctx, node) {
+    // Helper method to draw regular nodes for export (accept explicit colors map)
+    drawRegularNodeForExport(ctx, node, colors = null) {
+        const theme = colors || this.themeColors || {};
         // Set colors based on node type
         const isMaterial = node.type === 'material';
-        const matFill = this.themeColors && this.themeColors.nodeMaterialFill ? this.themeColors.nodeMaterialFill : '#1fb8cd';
-        const actFill = this.themeColors && this.themeColors.nodeActivityFill ? this.themeColors.nodeActivityFill : '#ffc185';
-        const matStroke = this.themeColors && this.themeColors.nodeMaterialStroke ? this.themeColors.nodeMaterialStroke : '#127681';
-        const actStroke = this.themeColors && this.themeColors.nodeActivityStroke ? this.themeColors.nodeActivityStroke : '#b4413c';
+        const matFill = theme.nodeMaterialFill || (this.themeColors && this.themeColors.nodeMaterialFill) || '#1fb8cd';
+        const actFill = theme.nodeActivityFill || (this.themeColors && this.themeColors.nodeActivityFill) || '#ffc185';
+        const matStroke = theme.nodeMaterialStroke || (this.themeColors && this.themeColors.nodeMaterialStroke) || '#127681';
+        const actStroke = theme.nodeActivityStroke || (this.themeColors && this.themeColors.nodeActivityStroke) || '#b4413c';
         ctx.fillStyle = isMaterial ? matFill : actFill;
         ctx.strokeStyle = isMaterial ? matStroke : actStroke;
         ctx.lineWidth = 2;
-        
+
         // Draw node shape
         ctx.beginPath();
         if (node.shape === 'triangle') {
@@ -1957,18 +1991,18 @@ class SupplyChainCanvas {
         }
         ctx.fill();
         ctx.stroke();
-        
+
         // Draw label
-        ctx.fillStyle = this.themeColors && this.themeColors.text ? this.themeColors.text : '#13343b';
+        ctx.fillStyle = theme.text || (this.themeColors && this.themeColors.text) || '#13343b';
         ctx.font = '12px Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        
+
         // Handle text wrapping for labels
         const lines = this.wrapTextForExport(ctx, node.label, 100);
         const lineHeight = 14;
         const startY = node.y + 40;
-        
+
         lines.forEach((line, index) => {
             ctx.fillText(line, node.x, startY + index * lineHeight);
         });
