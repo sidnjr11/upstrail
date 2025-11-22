@@ -1073,7 +1073,8 @@ select.form-control {
 }
 
 .edit-textarea {
-  height: 80px;
+  height: 120px;
+  min-height: 120px;
   resize: vertical;
   font-family: var(--font-family-base);
   width: 100%;

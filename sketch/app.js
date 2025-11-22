@@ -687,15 +687,15 @@ class SupplyChainCanvas {
         const nodeW = node.width || dims.width || 120;
         const nodeH = node.height || dims.height || 40;
 
-        // Constrain modal width between 220px and viewport width-40
+        // Constrain modal width between 420px and viewport width-40 (bigger edit area)
         const viewportW = Math.max(320, window.innerWidth || 800);
-        const desiredModalMin = Math.min(Math.max(nodeW + 80, 220), viewportW - 40);
+        const desiredModalMin = Math.min(Math.max(nodeW + 80, 420), viewportW - 40);
         if (modalContent) modalContent.style.minWidth = `${desiredModalMin}px`;
 
         // Set textarea width/height but keep it responsive inside modal
         input.style.width = `${Math.min(nodeW, desiredModalMin - 80)}px`;
         input.style.maxWidth = '100%';
-        input.style.height = `${Math.max(nodeH, 40)}px`;
+        input.style.height = `${Math.max(nodeH, 120)}px`;
         // Attach live input handler to update the node while editing
         this._editInputHandler = (e) => {
             const newContent = e.target.value;
@@ -704,11 +704,11 @@ class SupplyChainCanvas {
                 const dimsLive = this.computeTextBoxDimensions(this.editingNode.label, this.editingNode.fontSize || 12);
                 this.editingNode.width = dimsLive.width;
                 this.editingNode.height = dimsLive.height;
-                // update textarea size responsively
-                const desiredModalMinLive = Math.min(Math.max(dimsLive.width + 80, 220), viewportW - 40);
+                // update textarea size responsively (use larger minimum)
+                const desiredModalMinLive = Math.min(Math.max(dimsLive.width + 80, 420), viewportW - 40);
                 if (modalContent) modalContent.style.minWidth = `${desiredModalMinLive}px`;
                 input.style.width = `${Math.min(dimsLive.width, desiredModalMinLive - 80)}px`;
-                input.style.height = `${Math.max(dimsLive.height, 40)}px`;
+                input.style.height = `${Math.max(dimsLive.height, 120)}px`;
                 this.queueRender();
             }
         };
