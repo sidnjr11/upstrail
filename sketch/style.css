@@ -1076,6 +1076,9 @@ select.form-control {
   height: 80px;
   resize: vertical;
   font-family: var(--font-family-base);
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
 }
 
 /* Canvas cursor states - updated for new UX */

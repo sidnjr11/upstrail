@@ -679,20 +679,36 @@ class SupplyChainCanvas {
         const input = document.getElementById('editInput');
         document.querySelector('#editModal h3').textContent = 'Edit Text Content';
         input.value = node.label === 'Click to edit text' ? '' : node.label;
-        // Size the textarea to match node dimensions
-        if (node.width) input.style.width = `${node.width}px`;
-        if (node.height) input.style.height = `${node.height}px`;
+        // Size the modal and textarea to visually match the node, but constrain to sensible min/max
+        const modalContent = modal.querySelector('.modal-content');
+        // compute node dims (fallback to defaults)
+        const fontSize = node.fontSize || 12;
+        const dims = this.computeTextBoxDimensions(node.label || '', fontSize);
+        const nodeW = node.width || dims.width || 120;
+        const nodeH = node.height || dims.height || 40;
+
+        // Constrain modal width between 220px and viewport width-40
+        const viewportW = Math.max(320, window.innerWidth || 800);
+        const desiredModalMin = Math.min(Math.max(nodeW + 80, 220), viewportW - 40);
+        if (modalContent) modalContent.style.minWidth = `${desiredModalMin}px`;
+
+        // Set textarea width/height but keep it responsive inside modal
+        input.style.width = `${Math.min(nodeW, desiredModalMin - 80)}px`;
+        input.style.maxWidth = '100%';
+        input.style.height = `${Math.max(nodeH, 40)}px`;
         // Attach live input handler to update the node while editing
         this._editInputHandler = (e) => {
             const newContent = e.target.value;
             if (this.editingNode) {
                 this.editingNode.label = newContent === '' ? 'Click to edit text' : newContent;
-                const dims = this.computeTextBoxDimensions(this.editingNode.label, this.editingNode.fontSize || 12);
-                this.editingNode.width = dims.width;
-                this.editingNode.height = dims.height;
-                // update modal size to reflect changes
-                input.style.width = `${this.editingNode.width}px`;
-                input.style.height = `${this.editingNode.height}px`;
+                const dimsLive = this.computeTextBoxDimensions(this.editingNode.label, this.editingNode.fontSize || 12);
+                this.editingNode.width = dimsLive.width;
+                this.editingNode.height = dimsLive.height;
+                // update textarea size responsively
+                const desiredModalMinLive = Math.min(Math.max(dimsLive.width + 80, 220), viewportW - 40);
+                if (modalContent) modalContent.style.minWidth = `${desiredModalMinLive}px`;
+                input.style.width = `${Math.min(dimsLive.width, desiredModalMinLive - 80)}px`;
+                input.style.height = `${Math.max(dimsLive.height, 40)}px`;
                 this.queueRender();
             }
         };
@@ -1564,6 +1580,9 @@ class SupplyChainCanvas {
             input.removeEventListener('input', this._editInputHandler);
             this._editInputHandler = null;
         }
+        const modal = document.getElementById('editModal');
+        const modalContent = modal ? modal.querySelector('.modal-content') : null;
+        if (modalContent) modalContent.style.minWidth = '';
         document.getElementById('editModal').classList.add('hidden');
         this.editingNode = null;
     }
