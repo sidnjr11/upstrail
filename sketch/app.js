@@ -1837,7 +1837,18 @@ class SupplyChainCanvas {
         tempCtx.scale(scaleFactor, scaleFactor);
         
         // Force export colors to light theme so copied image looks like day mode
-        const exportColors = this.getThemeColorsForScheme('light');
+        const exportColors = this.getThemeColorsForScheme('light') || {};
+        // Ensure critical color tokens are set to readable day-mode values
+        // (override any unexpected values coming from CSS/resolution)
+        Object.assign(exportColors, {
+            text: '#13343b',
+            canvasSurface: '#ffffff',
+            nodeMaterialFill: '#1fb8cd',
+            nodeActivityFill: '#ffc185',
+            nodeMaterialStroke: '#127681',
+            nodeActivityStroke: '#b4413c',
+            arrow: '#626c71'
+        });
         // Set white/background (no transparency) according to light theme
         tempCtx.fillStyle = exportColors.canvasSurface || this.copySettings.backgroundColor;
         tempCtx.fillRect(0, 0, tempCanvas.width / scaleFactor, tempCanvas.height / scaleFactor);
