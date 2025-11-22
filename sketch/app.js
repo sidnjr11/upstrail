@@ -1629,6 +1629,15 @@ class SupplyChainCanvas {
         });
 
         this.connections = [...this.sampleData.connections];
+        // Ensure any textboxes have computed sizes
+        this.nodes.forEach(n => {
+            if (n.type === 'textbox') {
+                n.fontSize = n.fontSize || 12;
+                const dims = this.computeTextBoxDimensions(n.label || 'Click to edit text', n.fontSize);
+                n.width = dims.width;
+                n.height = dims.height;
+            }
+        });
         this.resetZoom();
         this.showStatus('Sample supply chain loaded!', 'success');
     }
@@ -1676,6 +1685,15 @@ class SupplyChainCanvas {
                 this.nodes = data.nodes || [];
                 this.connections = data.connections || [];
                 this.nodeCounter = this.nodes.length;
+                // Ensure textboxes have computed dimensions
+                this.nodes.forEach(n => {
+                    if (n.type === 'textbox') {
+                        n.fontSize = n.fontSize || 12;
+                        const dims = this.computeTextBoxDimensions(n.label || 'Click to edit text', n.fontSize);
+                        n.width = dims.width;
+                        n.height = dims.height;
+                    }
+                });
                 this.selectedNodes = [];
                 this.resetZoom();
                 this.showStatus('Diagram loaded successfully!', 'success');
@@ -1983,7 +2001,12 @@ class SupplyChainCanvas {
         const lineHeight = fontSize + 2;
         const finalHeight = Math.max(28, Math.ceil(totalLines * lineHeight + padding * 2));
 
-        return { width: finalWidth, height: finalHeight, lineHeight, lines: totalLines };
+        const result = { width: finalWidth, height: finalHeight, lineHeight, lines: totalLines };
+        // Small debug log to help verify resizing behavior in the browser console
+        if (window && window.console && window.console.debug) {
+            console.debug('computeTextBoxDimensions', { text, fontSize, result });
+        }
+        return result;
     }
 }
 
