@@ -441,6 +441,7 @@ class SupplyChainCanvas {
         }
 
         if (e.ctrlKey || e.metaKey) {
+            // Ctrl/Cmd + shortcuts
             switch (e.key.toLowerCase()) {
                 case 'z': 
                     e.preventDefault(); 
@@ -451,12 +452,21 @@ class SupplyChainCanvas {
                     this.cutSelected(); 
                     break;
                 case 'c':
+                    // Ctrl+C: export image for Excel AND copy selection to internal clipboard
                     e.preventDefault();
                     if (this.selectedNodes.length > 0) {
+                        // trigger image copy (async)
                         this.copySelectionForExcel();
+                        // also copy to internal clipboard for canvas paste
+                        this.copySelectionToClipboard();
                     } else {
                         this.showStatus('Select elements to copy', 'warning');
                     }
+                    break;
+                case 'v':
+                    // Ctrl+V -> paste from internal clipboard (duplicate on canvas)
+                    e.preventDefault();
+                    this.pasteFromClipboard();
                     break;
             }
             return;
@@ -511,7 +521,11 @@ class SupplyChainCanvas {
 
     cutSelected() {
         if (this.selectedNodes.length > 0) {
-            this.stateManager.clipboard = JSON.parse(JSON.stringify(this.selectedNodes));
+            // Copy selected nodes and their internal connections to clipboard
+            const nodesCopy = JSON.parse(JSON.stringify(this.selectedNodes));
+            const selectedIds = new Set(this.selectedNodes.map(n => n.id));
+            const connsCopy = this.connections.filter(c => selectedIds.has(c.from) && selectedIds.has(c.to)).map(c => JSON.parse(JSON.stringify(c)));
+            this.stateManager.clipboard = { nodes: nodesCopy, connections: connsCopy };
             this.saveState();
             this.selectedNodes.forEach(node => this.deleteNode(node, false));
             this.selectedNodes = [];
@@ -1650,6 +1664,61 @@ class SupplyChainCanvas {
         this.selectedNodes = newNodes;
         this.hideContextMenu();
         this.queueRender();
+    }
+
+    // Copy selected nodes + internal connections to internal clipboard (for paste)
+    copySelectionToClipboard() {
+        if (this.selectedNodes.length === 0) {
+            this.showStatus('Nothing selected to copy', 'warning');
+            return;
+        }
+        const nodesCopy = JSON.parse(JSON.stringify(this.selectedNodes));
+        const selectedIds = new Set(this.selectedNodes.map(n => n.id));
+        const connsCopy = this.connections.filter(c => selectedIds.has(c.from) && selectedIds.has(c.to)).map(c => JSON.parse(JSON.stringify(c)));
+        this.stateManager.clipboard = { nodes: nodesCopy, connections: connsCopy };
+        this.showStatus(`Copied ${nodesCopy.length} element(s) to clipboard`, 'success');
+    }
+
+    // Paste from internal clipboard, duplicating nodes and connections
+    pasteFromClipboard() {
+        const clip = this.stateManager.clipboard;
+        if (!clip || !clip.nodes || clip.nodes.length === 0) {
+            this.showStatus('Clipboard is empty', 'warning');
+            return;
+        }
+
+        this.saveState();
+        const idMap = {};
+        const newNodes = [];
+        // Offset pasted nodes slightly so user can see duplication
+        const offsetX = 20, offsetY = 20;
+
+        clip.nodes.forEach(orig => {
+            const newId = `node_${++this.nodeCounter}`;
+            idMap[orig.id] = newId;
+            const newNode = JSON.parse(JSON.stringify(orig));
+            newNode.id = newId;
+            newNode.x = (orig.x || 0) + offsetX;
+            newNode.y = (orig.y || 0) + offsetY;
+            this.nodes.push(newNode);
+            newNodes.push(newNode);
+        });
+
+        // Recreate internal connections among pasted nodes
+        if (clip.connections && clip.connections.length > 0) {
+            clip.connections.forEach(c => {
+                const fromNew = idMap[c.from];
+                const toNew = idMap[c.to];
+                if (fromNew && toNew) {
+                    this.connections.push({ from: fromNew, to: toNew });
+                }
+            });
+        }
+
+        this.selectedNodes = newNodes;
+        this.queueRender();
+        this.showStatus(`Pasted ${newNodes.length} element(s)`, 'success');
+        this.saveState();
     }
 
     deleteSelection() {
