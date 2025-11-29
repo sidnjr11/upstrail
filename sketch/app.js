@@ -375,9 +375,12 @@ class SupplyChainCanvas {
         const themeBtn = document.getElementById('themeToggleBtn');
         if (themeBtn) themeBtn.addEventListener('click', () => this.toggleTheme());
 
-        document.getElementById('panTool').addEventListener('click', () => this.setTool('pan'));
-        document.getElementById('connectTool').addEventListener('click', () => this.setTool('connect'));
-        document.getElementById('deleteTool').addEventListener('click', () => this.setTool('delete'));
+        const panToolEl = document.getElementById('panTool');
+        if (panToolEl) panToolEl.addEventListener('click', () => this.setTool('pan'));
+        const connectToolEl = document.getElementById('connectTool');
+        if (connectToolEl) connectToolEl.addEventListener('click', () => this.setTool('connect'));
+        const deleteToolEl = document.getElementById('deleteTool');
+        if (deleteToolEl) deleteToolEl.addEventListener('click', () => this.setTool('delete'));
 
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
         this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
@@ -388,13 +391,20 @@ class SupplyChainCanvas {
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
         document.addEventListener('keyup', (e) => { if (e.key === 'Control') this.isCtrlPressed = false; });
 
-        document.getElementById('undoBtn').addEventListener('click', this.undo.bind(this));
-        document.getElementById('saveBtn').addEventListener('click', this.save.bind(this));
-        document.getElementById('loadBtn').addEventListener('click', this.load.bind(this));
-        document.getElementById('exportBtn').addEventListener('click', this.exportPNG.bind(this));
-        document.getElementById('clearBtn').addEventListener('click', this.clear.bind(this));
-        document.getElementById('loadExampleBtn').addEventListener('click', this.loadExample.bind(this));
-        document.getElementById('generateBtn').addEventListener('click', this.generateFromNL.bind(this));
+        const undoBtn = document.getElementById('undoBtn');
+        if (undoBtn) undoBtn.addEventListener('click', this.undo.bind(this));
+        const saveBtn = document.getElementById('saveBtn');
+        if (saveBtn) saveBtn.addEventListener('click', this.save.bind(this));
+        const loadBtn = document.getElementById('loadBtn');
+        if (loadBtn) loadBtn.addEventListener('click', this.load.bind(this));
+        const exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) exportBtn.addEventListener('click', this.exportPNG.bind(this));
+        const clearBtn = document.getElementById('clearBtn');
+        if (clearBtn) clearBtn.addEventListener('click', this.clear.bind(this));
+        const loadExampleBtn = document.getElementById('loadExampleBtn');
+        if (loadExampleBtn) loadExampleBtn.addEventListener('click', this.loadExample.bind(this));
+        const generateBtn = document.getElementById('generateBtn');
+        if (generateBtn) generateBtn.addEventListener('click', this.generateFromNL.bind(this));
 
         // Context menu event listeners
         document.getElementById('addConnectedMaterial').addEventListener('click', this.addConnectedMaterial.bind(this));
@@ -1480,6 +1490,7 @@ class SupplyChainCanvas {
      */
     generateFromNL() {
         const input = document.getElementById('nlInput').value.trim();
+        if (window && window.console && window.console.debug) console.debug('generateFromNL -> input', input);
         if (!input) {
             this.showStatus('Please enter a description first!', 'warning');
             return;
