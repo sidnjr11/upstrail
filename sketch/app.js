@@ -225,6 +225,7 @@ class SupplyChainCanvas {
         this.contextMenuConnection = null;
         this.selectedConnection = null;
         this.editingNode = null;
+        this.editingConnection = null;
         this.draggedToolType = null;
         this.mousePos = { x: 0, y: 0 };
         this.copySettings = {
@@ -730,6 +731,19 @@ class SupplyChainCanvas {
         this.queueRender();
     }
 
+    enterConnectionEditMode(connection) {
+        this.editingConnection = connection;
+        // Deselect nodes to focus editing on connection
+        this.selectedNodes = [];
+        const modal = document.getElementById('editModal');
+        const input = document.getElementById('editInput');
+        document.querySelector('#editModal h3').textContent = 'Edit Connection Label';
+        input.value = connection.label || '';
+        modal.classList.remove('hidden');
+        setTimeout(() => { input.focus(); input.select(); }, 10);
+        this.queueRender();
+    }
+
     enterTextEditMode(node) {
         this.editingNode = node;
         this.selectedNodes = [node];
@@ -904,10 +918,17 @@ class SupplyChainCanvas {
         e.stopPropagation();
         const pos = this.getMousePos(e);
         const clickedNode = this.getNodeAt(pos.x, pos.y);
+        const clickedConn = this.getConnectionAt(pos.x, pos.y);
 
         if (clickedNode) {
             if (clickedNode.type === 'textbox') this.enterTextEditMode(clickedNode);
             else this.enterLabelEditMode(clickedNode);
+            return;
+        }
+
+        if (clickedConn) {
+            this.enterConnectionEditMode(clickedConn);
+            return;
         }
     }
 
@@ -961,7 +982,7 @@ class SupplyChainCanvas {
         }
 
         this.saveState();
-        this.connections.push({ from: fromNode.id, to: toNode.id });
+        this.connections.push({ from: fromNode.id, to: toNode.id, label: '' });
         this.showStatus(`Connected ${fromNode.label} → ${toNode.label}`, 'success');
         this.connectingFrom = null;
         return true;
@@ -1201,17 +1222,17 @@ class SupplyChainCanvas {
             const from = this.nodes.find(n => n.id === conn.from);
             const to = this.nodes.find(n => n.id === conn.to);
             if (!from || !to) return;
-            // If this connection is selected, draw it highlighted
-            if (this.selectedConnection && this.selectedConnection.from === conn.from && this.selectedConnection.to === conn.to) {
-                // Draw highlighted connection manually (don't call drawArrow which uses themeColors)
-                const headLength = 12 / this.camera.zoom;
-                const angle = Math.atan2(to.y - from.y, to.x - from.x);
-                const nodeRadius = 30;
-                const adjFromX = from.x + nodeRadius * Math.cos(angle);
-                const adjFromY = from.y + nodeRadius * Math.sin(angle);
-                const adjToX = to.x - nodeRadius * Math.cos(angle);
-                const adjToY = to.y - nodeRadius * Math.sin(angle);
 
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            const nodeRadius = 30;
+            const adjFromX = from.x + nodeRadius * Math.cos(angle);
+            const adjFromY = from.y + nodeRadius * Math.sin(angle);
+            const adjToX = to.x - nodeRadius * Math.cos(angle);
+            const adjToY = to.y - nodeRadius * Math.sin(angle);
+
+            // Draw the connection line / arrow
+            if (this.selectedConnection && this.selectedConnection.from === conn.from && this.selectedConnection.to === conn.to) {
+                // Highlighted
                 this.ctx.save();
                 this.ctx.strokeStyle = this.themeColors.primary || '#007bff';
                 this.ctx.lineWidth = 4 / this.camera.zoom;
@@ -1221,6 +1242,7 @@ class SupplyChainCanvas {
                 this.ctx.lineTo(adjToX, adjToY);
                 this.ctx.stroke();
 
+                const headLength = 12 / this.camera.zoom;
                 this.ctx.fillStyle = this.themeColors.primary || '#007bff';
                 this.ctx.beginPath();
                 this.ctx.moveTo(adjToX, adjToY);
@@ -1237,6 +1259,21 @@ class SupplyChainCanvas {
                 this.ctx.restore();
             } else {
                 this.drawArrow(from.x, from.y, to.x, to.y);
+            }
+
+            // Draw connection label if present
+            if (conn.label) {
+                const midX = (adjFromX + adjToX) / 2;
+                const midY = (adjFromY + adjToY) / 2;
+                this.ctx.save();
+                this.ctx.translate(midX, midY);
+                this.ctx.rotate(angle);
+                this.ctx.fillStyle = this.themeColors.textSecondary || this.themeColors.text || '#626c71';
+                this.ctx.font = '12px -apple-system, BlinkMacSystemFont, system-ui, sans-serif';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'bottom';
+                this.ctx.fillText(conn.label, 0, -8);
+                this.ctx.restore();
             }
         });
     }
@@ -1605,7 +1642,7 @@ class SupplyChainCanvas {
 
 
     createConnectionDirect(fromNode, toNode) {
-        this.connections.push({ from: fromNode.id, to: toNode.id });
+        this.connections.push({ from: fromNode.id, to: toNode.id, label: '' });
     }
 
     showContextMenu(x, y) {
@@ -1704,9 +1741,16 @@ class SupplyChainCanvas {
     }
 
     editLabel() {
-        if (!this.contextMenuNode) return;
-        this.enterLabelEditMode(this.contextMenuNode);
-        this.hideContextMenu();
+        if (this.contextMenuNode) {
+            this.enterLabelEditMode(this.contextMenuNode);
+            this.hideContextMenu();
+            return;
+        }
+        if (this.contextMenuConnection) {
+            this.enterConnectionEditMode(this.contextMenuConnection);
+            this.hideContextMenu();
+            return;
+        }
     }
 
     saveEdit() {
@@ -1739,6 +1783,15 @@ class SupplyChainCanvas {
                 this._editInputHandler = null;
             }
         }
+        // Handle editing a connection label
+        else if (this.editingConnection) {
+            const input = document.getElementById('editInput');
+            const newContent = input.value.trim();
+            this.saveState();
+            this.editingConnection.label = newContent;
+            this.showStatus('Updated connection label', 'success');
+            this.queueRender();
+        }
         this.cancelEdit();
     }
 
@@ -1753,6 +1806,7 @@ class SupplyChainCanvas {
         if (modalContent) modalContent.style.minWidth = '';
         document.getElementById('editModal').classList.add('hidden');
         this.editingNode = null;
+        this.editingConnection = null;
     }
 
     deleteSelectedNode() {
@@ -1794,7 +1848,7 @@ class SupplyChainCanvas {
 
         this.connections.forEach(conn => {
             if (idMap[conn.from] && idMap[conn.to]) {
-                this.connections.push({ from: idMap[conn.from], to: idMap[conn.to] });
+                this.connections.push({ from: idMap[conn.from], to: idMap[conn.to], label: conn.label || '' });
             }
         });
 
@@ -1853,7 +1907,7 @@ class SupplyChainCanvas {
                 const fromNew = idMap[c.from];
                 const toNew = idMap[c.to];
                 if (fromNew && toNew) {
-                    this.connections.push({ from: fromNew, to: toNew });
+                    this.connections.push({ from: fromNew, to: toNew, label: c.label || '' });
                 }
             });
         }
