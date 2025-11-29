@@ -401,10 +401,12 @@ class SupplyChainCanvas {
         document.getElementById('deleteNode').addEventListener('click', this.deleteSelectedNode.bind(this));
         document.getElementById('duplicateSelection').addEventListener('click', this.duplicateSelection.bind(this));
         document.getElementById('deleteSelection').addEventListener('click', this.deleteSelection.bind(this));
+
         // New context menu item for simple copy (stores to internal clipboard)
         const copySelectionEl = document.getElementById('copySelection');
-        if (copySelectionEl) copySelectionEl.addEventListener('click', (e) => { this.copySelectionToClipboard(); this.hideContextMenu(); });
-        document.getElementById('copyForExcel').addEventListener('click', (e) => { this.copySelectionForExcel(); this.hideContextMenu(); });
+        if (copySelectionEl) copySelectionEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copySelectionToClipboard(); this.hideContextMenu(); });
+        const copyForExcelEl = document.getElementById('copyForExcel');
+        if (copyForExcelEl) copyForExcelEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copySelectionForExcel(); this.hideContextMenu(); });
 
         document.getElementById('saveEditBtn').addEventListener('click', this.saveEdit.bind(this));
         document.getElementById('cancelEditBtn').addEventListener('click', this.cancelEdit.bind(this));
@@ -1683,18 +1685,24 @@ class SupplyChainCanvas {
         const nodesCopy = JSON.parse(JSON.stringify(this.selectedNodes));
         const selectedIds = new Set(this.selectedNodes.map(n => n.id));
         const connsCopy = this.connections.filter(c => selectedIds.has(c.from) && selectedIds.has(c.to)).map(c => JSON.parse(JSON.stringify(c)));
-        this.stateManager.clipboard = { nodes: nodesCopy, connections: connsCopy };
+        const clip = { nodes: nodesCopy, connections: connsCopy };
+        // Store in both stateManager (for persistence) and local property for immediate access
+        this.stateManager.clipboard = clip;
+        this.internalClipboard = clip;
+        // Debug info for developer troubleshooting
+        if (window && window.console) console.debug('copySelectionToClipboard -> stored', clip);
         this.showStatus(`Copied ${nodesCopy.length} element(s) to clipboard`, 'success');
     }
 
     // Paste from internal clipboard, duplicating nodes and connections
     pasteFromClipboard() {
-        const clip = this.stateManager.clipboard;
+        const clip = this.internalClipboard || this.stateManager.clipboard;
         if (!clip || !clip.nodes || clip.nodes.length === 0) {
             this.showStatus('Clipboard is empty', 'warning');
             return;
         }
 
+        if (window && window.console) console.debug('pasteFromClipboard -> clipboard', clip);
         this.saveState();
         const idMap = {};
         const newNodes = [];
