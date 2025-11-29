@@ -222,6 +222,8 @@ class SupplyChainCanvas {
         this.connectingFrom = null;
         this.nodeCounter = 0;
         this.contextMenuNode = null;
+        this.contextMenuConnection = null;
+        this.selectedConnection = null;
         this.editingNode = null;
         this.draggedToolType = null;
         this.mousePos = { x: 0, y: 0 };
@@ -407,6 +409,8 @@ class SupplyChainCanvas {
         if (copySelectionEl) copySelectionEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copySelectionToClipboard(); this.hideContextMenu(); });
         const copyForExcelEl = document.getElementById('copyForExcel');
         if (copyForExcelEl) copyForExcelEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copySelectionForExcel(); this.hideContextMenu(); });
+        const deleteConnectionEl = document.getElementById('deleteConnection');
+        if (deleteConnectionEl) deleteConnectionEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.deleteConnectionFromContext(); });
 
         document.getElementById('saveEditBtn').addEventListener('click', this.saveEdit.bind(this));
         document.getElementById('cancelEditBtn').addEventListener('click', this.cancelEdit.bind(this));
@@ -511,11 +515,22 @@ class SupplyChainCanvas {
     deselectAll() {
         this.selectedNodes = [];
         this.connectingFrom = null;
+        this.selectedConnection = null;
+        this.contextMenuConnection = null;
+        this.contextMenuNode = null;
         this.hideContextMenu();
         this.queueRender();
     }
 
     deleteSelected() {
+        if (this.selectedConnection) {
+            this.saveState();
+            this.deleteConnection(this.selectedConnection);
+            this.selectedConnection = null;
+            this.queueRender();
+            return;
+        }
+
         if (this.selectedNodes.length > 0) {
             this.saveState();
             this.selectedNodes.forEach(node => this.deleteNode(node, false));
@@ -592,6 +607,9 @@ class SupplyChainCanvas {
 
     handleMouseDown(e) {
         this.hideContextMenu();
+        // clear any selected connection when interacting with canvas
+        this.selectedConnection = null;
+        this.contextMenuConnection = null;
         // Reset all interaction flags first
         this.isPanning = false;
         this.isDraggingElement = false;
@@ -600,6 +618,7 @@ class SupplyChainCanvas {
         const pos = this.getMousePos(e);
         const clickedNode = this.getNodeAt(pos.x, pos.y);
         const clickedHandle = this.getResizeHandleAt(pos.x, pos.y);
+        const clickedConn = this.getConnectionAt(pos.x, pos.y);
 
         if (this.isCtrlPressed || this.currentTool === 'pan') {
             this.isPanning = true;
@@ -626,6 +645,14 @@ class SupplyChainCanvas {
                     this.selectedNodes.forEach(n => n.dragStart = { x: n.x, y: n.y });
                     this.updateCanvasCursor();
                     this.updateDragStatus(`Moving ${this.selectedNodes.length} element(s)`);
+                } else if (clickedConn) {
+                    // select connection on left click when in select mode
+                    this.selectedConnection = clickedConn;
+                    this.selectedNodes = [];
+                    this.updateCanvasCursor();
+                    this.updateDragStatus(`Selected 1 connection`);
+                    this.queueRender();
+                    return;
                 } else {
                     this.isSelecting = true;
                     this.selectionRect = { startX: pos.x, startY: pos.y, endX: pos.x, endY: pos.y };
@@ -830,10 +857,21 @@ class SupplyChainCanvas {
 
         const pos = this.getMousePos(e);
         const clickedNode = this.getNodeAt(pos.x, pos.y);
+        const clickedConn = this.getConnectionAt(pos.x, pos.y);
 
         if (clickedNode) {
             if (!this.selectedNodes.includes(clickedNode)) this.selectedNodes = [clickedNode];
             this.contextMenuNode = clickedNode;
+            this.contextMenuConnection = null;
+            this.selectedConnection = null;
+            this.showContextMenu(e.clientX, e.clientY);
+            this.queueRender();
+        } else if (clickedConn) {
+            // select the connection for possible deletion
+            this.selectedNodes = [];
+            this.selectedConnection = clickedConn;
+            this.contextMenuConnection = clickedConn;
+            this.contextMenuNode = null;
             this.showContextMenu(e.clientX, e.clientY);
             this.queueRender();
         } else {
@@ -1146,7 +1184,44 @@ class SupplyChainCanvas {
         this.connections.forEach(conn => {
             const from = this.nodes.find(n => n.id === conn.from);
             const to = this.nodes.find(n => n.id === conn.to);
-            if (from && to) this.drawArrow(from.x, from.y, to.x, to.y);
+            if (!from || !to) return;
+            // If this connection is selected, draw it highlighted
+            if (this.selectedConnection && this.selectedConnection.from === conn.from && this.selectedConnection.to === conn.to) {
+                // Draw highlighted connection manually (don't call drawArrow which uses themeColors)
+                const headLength = 12 / this.camera.zoom;
+                const angle = Math.atan2(to.y - from.y, to.x - from.x);
+                const nodeRadius = 30;
+                const adjFromX = from.x + nodeRadius * Math.cos(angle);
+                const adjFromY = from.y + nodeRadius * Math.sin(angle);
+                const adjToX = to.x - nodeRadius * Math.cos(angle);
+                const adjToY = to.y - nodeRadius * Math.sin(angle);
+
+                this.ctx.save();
+                this.ctx.strokeStyle = this.themeColors.primary || '#007bff';
+                this.ctx.lineWidth = 4 / this.camera.zoom;
+                this.ctx.lineCap = 'round';
+                this.ctx.beginPath();
+                this.ctx.moveTo(adjFromX, adjFromY);
+                this.ctx.lineTo(adjToX, adjToY);
+                this.ctx.stroke();
+
+                this.ctx.fillStyle = this.themeColors.primary || '#007bff';
+                this.ctx.beginPath();
+                this.ctx.moveTo(adjToX, adjToY);
+                this.ctx.lineTo(
+                    adjToX - headLength * Math.cos(angle - Math.PI / 6),
+                    adjToY - headLength * Math.sin(angle - Math.PI / 6)
+                );
+                this.ctx.lineTo(
+                    adjToX - headLength * Math.cos(angle + Math.PI / 6),
+                    adjToY - headLength * Math.sin(angle + Math.PI / 6)
+                );
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.restore();
+            } else {
+                this.drawArrow(from.x, from.y, to.x, to.y);
+            }
         });
     }
 
@@ -1529,6 +1604,7 @@ class SupplyChainCanvas {
         const multiItems = menu.querySelectorAll('.multi-node-item');
         const copyForExcel = document.getElementById('copyForExcel');
         const copySelection = document.getElementById('copySelection');
+        const deleteConnection = document.getElementById('deleteConnection');
 
         // Show/hide items based on selection count
         if (this.selectedNodes.length > 1) {
@@ -1536,6 +1612,7 @@ class SupplyChainCanvas {
             multiItems.forEach(item => item.style.display = 'block');
             if (copyForExcel) copyForExcel.style.display = 'block'; // Always show for multiple selection
             if (copySelection) copySelection.style.display = 'block';
+            if (deleteConnection) deleteConnection.style.display = 'none';
         } else if (this.selectedNodes.length === 1) {
             singleItems.forEach(item => item.style.display = 'block');
             multiItems.forEach(item => {
@@ -1547,6 +1624,7 @@ class SupplyChainCanvas {
             });
 
             if (copySelection) copySelection.style.display = 'block';
+            if (deleteConnection) deleteConnection.style.display = 'none';
 
             // Show/hide specific items based on node type
             const matItem = document.getElementById('addConnectedMaterial');
@@ -1561,6 +1639,17 @@ class SupplyChainCanvas {
             multiItems.forEach(item => item.style.display = 'none');
             if (copyForExcel) copyForExcel.style.display = 'none'; // Hide copy when nothing selected
             if (copySelection) copySelection.style.display = 'none';
+            if (deleteConnection) deleteConnection.style.display = 'none';
+        }
+
+        // If a connection was right-clicked, show connection-specific items
+        if (this.contextMenuConnection) {
+            // hide node-specific single-node items
+            singleItems.forEach(item => item.style.display = 'none');
+            multiItems.forEach(item => item.style.display = 'none');
+            if (copySelection) copySelection.style.display = 'none';
+            if (copyForExcel) copyForExcel.style.display = 'none';
+            if (deleteConnection) deleteConnection.style.display = 'block';
         }
     }
 
@@ -1644,6 +1733,17 @@ class SupplyChainCanvas {
             this.saveState();
             this.deleteNode(this.contextMenuNode);
             this.selectedNodes = this.selectedNodes.filter(n => n.id !== this.contextMenuNode.id);
+        }
+        this.contextMenuNode = null;
+        this.hideContextMenu();
+    }
+
+    deleteConnectionFromContext() {
+        if (this.contextMenuConnection) {
+            this.saveState();
+            this.deleteConnection(this.contextMenuConnection);
+            if (this.selectedConnection && this.selectedConnection === this.contextMenuConnection) this.selectedConnection = null;
+            this.contextMenuConnection = null;
         }
         this.hideContextMenu();
     }
