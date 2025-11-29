@@ -1019,6 +1019,12 @@ select.form-control {
   background-color: var(--color-secondary);
 }
 
+.context-menu-item.disabled {
+  opacity: 0.45;
+  pointer-events: auto;
+  cursor: default;
+}
+
 .context-menu-item:first-child {
   border-top-left-radius: var(--radius-base);
   border-top-right-radius: var(--radius-base);

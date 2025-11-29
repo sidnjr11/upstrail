@@ -1661,8 +1661,10 @@ class SupplyChainCanvas {
             // Show paste if clipboard has items
             const clip = this.internalClipboard || this.stateManager.clipboard;
             if (pasteSelection) {
-                if (clip && clip.nodes && clip.nodes.length > 0) pasteSelection.style.display = 'block';
-                else pasteSelection.style.display = 'none';
+                // Always show the Paste entry on blank canvas, but mark disabled when clipboard empty
+                pasteSelection.style.display = 'block';
+                if (clip && clip.nodes && clip.nodes.length > 0) pasteSelection.classList.remove('disabled');
+                else pasteSelection.classList.add('disabled');
             }
         }
 
