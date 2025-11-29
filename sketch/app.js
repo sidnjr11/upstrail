@@ -401,7 +401,10 @@ class SupplyChainCanvas {
         document.getElementById('deleteNode').addEventListener('click', this.deleteSelectedNode.bind(this));
         document.getElementById('duplicateSelection').addEventListener('click', this.duplicateSelection.bind(this));
         document.getElementById('deleteSelection').addEventListener('click', this.deleteSelection.bind(this));
-        document.getElementById('copyForExcel').addEventListener('click', this.copySelectionForExcel.bind(this));
+        // New context menu item for simple copy (stores to internal clipboard)
+        const copySelectionEl = document.getElementById('copySelection');
+        if (copySelectionEl) copySelectionEl.addEventListener('click', (e) => { this.copySelectionToClipboard(); this.hideContextMenu(); });
+        document.getElementById('copyForExcel').addEventListener('click', (e) => { this.copySelectionForExcel(); this.hideContextMenu(); });
 
         document.getElementById('saveEditBtn').addEventListener('click', this.saveEdit.bind(this));
         document.getElementById('cancelEditBtn').addEventListener('click', this.cancelEdit.bind(this));
@@ -1523,12 +1526,14 @@ class SupplyChainCanvas {
         const singleItems = menu.querySelectorAll('.single-node-item');
         const multiItems = menu.querySelectorAll('.multi-node-item');
         const copyForExcel = document.getElementById('copyForExcel');
+        const copySelection = document.getElementById('copySelection');
 
         // Show/hide items based on selection count
         if (this.selectedNodes.length > 1) {
             singleItems.forEach(item => item.style.display = 'none');
             multiItems.forEach(item => item.style.display = 'block');
-            copyForExcel.style.display = 'block'; // Always show for multiple selection
+            if (copyForExcel) copyForExcel.style.display = 'block'; // Always show for multiple selection
+            if (copySelection) copySelection.style.display = 'block';
         } else if (this.selectedNodes.length === 1) {
             singleItems.forEach(item => item.style.display = 'block');
             multiItems.forEach(item => {
@@ -1538,6 +1543,8 @@ class SupplyChainCanvas {
                     item.style.display = 'none';
                 }
             });
+
+            if (copySelection) copySelection.style.display = 'block';
 
             // Show/hide specific items based on node type
             const matItem = document.getElementById('addConnectedMaterial');
@@ -1550,7 +1557,8 @@ class SupplyChainCanvas {
             // No selection
             singleItems.forEach(item => item.style.display = 'none');
             multiItems.forEach(item => item.style.display = 'none');
-            copyForExcel.style.display = 'none'; // Hide copy when nothing selected
+            if (copyForExcel) copyForExcel.style.display = 'none'; // Hide copy when nothing selected
+            if (copySelection) copySelection.style.display = 'none';
         }
     }
 
