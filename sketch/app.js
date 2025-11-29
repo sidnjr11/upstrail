@@ -417,6 +417,8 @@ class SupplyChainCanvas {
         // New context menu item for simple copy (stores to internal clipboard)
         const copySelectionEl = document.getElementById('copySelection');
         if (copySelectionEl) copySelectionEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copySelectionToClipboard(); this.hideContextMenu(); });
+        const pasteSelectionEl = document.getElementById('pasteSelection');
+        if (pasteSelectionEl) pasteSelectionEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.pasteFromClipboard(); this.hideContextMenu(); });
         const copyForExcelEl = document.getElementById('copyForExcel');
         if (copyForExcelEl) copyForExcelEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copySelectionForExcel(); this.hideContextMenu(); });
         const deleteConnectionEl = document.getElementById('deleteConnection');
@@ -885,8 +887,12 @@ class SupplyChainCanvas {
             this.showContextMenu(e.clientX, e.clientY);
             this.queueRender();
         } else {
-            this.deselectAll();
-            this.showStatus('Right-click on elements for options.', 'info');
+            // Right-click on blank canvas: show context menu so paste (if present) is available
+            this.selectedNodes = [];
+            this.contextMenuNode = null;
+            this.contextMenuConnection = null;
+            this.selectedConnection = null;
+            this.showContextMenu(e.clientX, e.clientY);
         }
 
         // Ensure cursor is reset
@@ -1615,6 +1621,7 @@ class SupplyChainCanvas {
         const multiItems = menu.querySelectorAll('.multi-node-item');
         const copyForExcel = document.getElementById('copyForExcel');
         const copySelection = document.getElementById('copySelection');
+        const pasteSelection = document.getElementById('pasteSelection');
         const deleteConnection = document.getElementById('deleteConnection');
 
         // Show/hide items based on selection count
@@ -1648,9 +1655,15 @@ class SupplyChainCanvas {
             // No selection
             singleItems.forEach(item => item.style.display = 'none');
             multiItems.forEach(item => item.style.display = 'none');
-            if (copyForExcel) copyForExcel.style.display = 'none'; // Hide copy when nothing selected
+            if (copyForExcel) copyForExcel.style.display = 'none'; // Hide other copy when nothing selected
             if (copySelection) copySelection.style.display = 'none';
             if (deleteConnection) deleteConnection.style.display = 'none';
+            // Show paste if clipboard has items
+            const clip = this.internalClipboard || this.stateManager.clipboard;
+            if (pasteSelection) {
+                if (clip && clip.nodes && clip.nodes.length > 0) pasteSelection.style.display = 'block';
+                else pasteSelection.style.display = 'none';
+            }
         }
 
         // If a connection was right-clicked, show connection-specific items
@@ -1661,6 +1674,7 @@ class SupplyChainCanvas {
             if (copySelection) copySelection.style.display = 'none';
             if (copyForExcel) copyForExcel.style.display = 'none';
             if (deleteConnection) deleteConnection.style.display = 'block';
+            if (pasteSelection) pasteSelection.style.display = 'none';
         }
     }
 
