@@ -238,6 +238,10 @@ class SupplyChainCanvas {
         this.penThickness = 4;
         this.penColor = null; // resolved from theme on init
 
+        // Offscreen canvas for strokes to allow eraser to only affect strokes layer
+        this.strokesCanvas = document.createElement('canvas');
+        this.strokesCtx = this.strokesCanvas.getContext('2d');
+
         // New properties for zoom, pan, and resize
         this.camera = { x: 0, y: 0, zoom: 1 };
         this.isPanning = false;
@@ -545,7 +549,7 @@ class SupplyChainCanvas {
     }
 
     setTool(toolName) {
-        document.querySelectorAll('#panTool, #connectTool, #deleteTool').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('#panTool, #connectTool, #deleteTool, #penTool, #eraserTool').forEach(btn => btn.classList.remove('active'));
         if (toolName !== 'select') {
             const toolBtn = document.getElementById(`${toolName}Tool`);
             if (toolBtn) toolBtn.classList.add('active');
@@ -1129,12 +1133,17 @@ class SupplyChainCanvas {
         this.drawGrid();
         this.drawConnections();
         this.drawNodes();
-        this.drawStrokes();
         this.drawConnectionPreview();
         this.drawSelectionBounds();
         this.drawSelectionRect();
 
         this.ctx.restore();
+        // Ensure strokes canvas size matches main canvas
+        this.updateStrokesCanvasSize();
+        // Render stroke layer (draws onto strokesCanvas)
+        this.drawStrokes();
+        // Composite stroke layer on top of main canvas (screen coords)
+        this.ctx.drawImage(this.strokesCanvas, 0, 0);
     }
 
     drawGrid() {
@@ -1437,27 +1446,47 @@ class SupplyChainCanvas {
         this.ctx.restore();
     }
 
+    updateStrokesCanvasSize() {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        if (!this.strokesCanvas) return;
+        if (this.strokesCanvas.width !== w || this.strokesCanvas.height !== h) {
+            this.strokesCanvas.width = w;
+            this.strokesCanvas.height = h;
+            // When resizing, keep existing strokes (we re-render from stroke data each frame)
+        }
+    }
+
     drawStrokes() {
+        // Draw strokes onto the offscreen strokes canvas in screen coordinates
+        const sc = this.strokesCanvas;
+        const sctx = this.strokesCtx;
+        if (!sctx) return;
+        // Clear strokes canvas
+        sctx.clearRect(0, 0, sc.width, sc.height);
+
         if (!this.freehandStrokes || this.freehandStrokes.length === 0) return;
         this.freehandStrokes.forEach(stroke => {
             if (!stroke.points || stroke.points.length === 0) return;
-            this.ctx.save();
+            // Convert world points to screen coords
+            const pts = stroke.points.map(p => ({ x: Math.round(p.x * this.camera.zoom + this.camera.x), y: Math.round(p.y * this.camera.zoom + this.camera.y) }));
+            sctx.save();
             if (stroke.tool === 'eraser') {
-                this.ctx.globalCompositeOperation = 'destination-out';
-                this.ctx.strokeStyle = 'rgba(0,0,0,1)';
+                sctx.globalCompositeOperation = 'destination-out';
+                sctx.strokeStyle = 'rgba(0,0,0,1)';
             } else {
-                this.ctx.globalCompositeOperation = 'source-over';
-                this.ctx.strokeStyle = stroke.color || (this.themeColors && this.themeColors.text) || '#000000';
+                sctx.globalCompositeOperation = 'source-over';
+                sctx.strokeStyle = stroke.color || (this.themeColors && this.themeColors.text) || '#000000';
             }
-            this.ctx.lineWidth = (stroke.width || this.penThickness || 4) / this.camera.zoom;
-            this.ctx.lineCap = 'round';
-            this.ctx.lineJoin = 'round';
-            this.ctx.beginPath();
-            const pts = stroke.points;
-            this.ctx.moveTo(pts[0].x, pts[0].y);
-            for (let i = 1; i < pts.length; i++) this.ctx.lineTo(pts[i].x, pts[i].y);
-            this.ctx.stroke();
-            this.ctx.restore();
+            // When drawing onto screen coordinate canvas, use stroke width as visual pixels
+            sctx.lineWidth = (stroke.width || this.penThickness || 4);
+            sctx.lineCap = 'round';
+            sctx.lineJoin = 'round';
+            sctx.beginPath();
+            sctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) sctx.lineTo(pts[i].x, pts[i].y);
+            sctx.stroke();
+            sctx.restore();
         });
     }
 
