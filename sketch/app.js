@@ -528,7 +528,8 @@ class SupplyChainCanvas {
             if (toolBtn) toolBtn.classList.add('active');
         }
         this.currentTool = toolName;
-        this.connectingFrom = null;
+        // Preserve an existing `connectingFrom` when switching to the connect tool
+        if (toolName !== 'connect') this.connectingFrom = null;
         this.updateCanvasCursor();
         this.updateStatusText();
         this.queueRender();
