@@ -424,6 +424,15 @@ class SupplyChainCanvas {
         if (copyForExcelEl) copyForExcelEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copySelectionForExcel(); this.hideContextMenu(); });
         const deleteConnectionEl = document.getElementById('deleteConnection');
         if (deleteConnectionEl) deleteConnectionEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.deleteConnectionFromContext(); });
+        const connectFromEl = document.getElementById('connectFromNode');
+        if (connectFromEl) connectFromEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation();
+            if (this.contextMenuNode) {
+                this.connectingFrom = this.contextMenuNode;
+                this.setTool('connect');
+                this.showStatus(`Connecting from ${this.contextMenuNode.label}. Click another node to connect.`, 'info');
+            }
+            this.hideContextMenu();
+        });
 
         document.getElementById('saveEditBtn').addEventListener('click', this.saveEdit.bind(this));
         document.getElementById('cancelEditBtn').addEventListener('click', this.cancelEdit.bind(this));
