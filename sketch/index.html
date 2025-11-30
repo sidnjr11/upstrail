@@ -52,12 +52,29 @@
                             <div class="tool-icon">🔗</div>
                             <span>Connect</span>
                         </button>
+                        <button id="penTool" class="tool-btn" title="Pen - draw freehand on canvas">
+                            <div class="tool-icon">✏️</div>
+                            <span>Pen</span>
+                        </button>
+                        <button id="eraserTool" class="tool-btn" title="Eraser - erase freehand strokes or parts of canvas">
+                            <div class="tool-icon">🧽</div>
+                            <span>Eraser</span>
+                        </button>
                         <button id="deleteTool" class="tool-btn" title="Delete tool - click to delete elements">
                             <div class="tool-icon">🗑️</div>
                             <span>Delete</span>
                         </button>
                     </div>
                 </div>
+
+            <div class="sidebar-section">
+                <h3>Pen / Eraser</h3>
+                <div class="pen-controls">
+                    <label for="penThickness">Thickness</label>
+                    <input id="penThickness" type="range" min="1" max="40" value="4">
+                    <span id="penThicknessVal">4</span>px
+                </div>
+            </div>
 
                 <!-- Create Elements Section -->
                 <div class="sidebar-section">

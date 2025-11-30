@@ -232,6 +232,11 @@ class SupplyChainCanvas {
             padding: 20, // Default padding in pixels
             backgroundColor: '#FFFFFF' // White background
         };
+        // Freehand drawing state
+        this.freehandStrokes = []; // array of { id, tool: 'pen'|'eraser', color, width, points: [{x,y}], composite }
+        this._currentStroke = null;
+        this.penThickness = 4;
+        this.penColor = null; // resolved from theme on init
 
         // New properties for zoom, pan, and resize
         this.camera = { x: 0, y: 0, zoom: 1 };
@@ -288,7 +293,8 @@ class SupplyChainCanvas {
         this.stateManager.saveState({
             nodes: this.nodes,
             connections: this.connections,
-            nodeCounter: this.nodeCounter
+            nodeCounter: this.nodeCounter,
+            freehandStrokes: this.freehandStrokes
         });
     }
 
@@ -296,7 +302,8 @@ class SupplyChainCanvas {
         this.stateManager.saveState({
             nodes: this.nodes,
             connections: this.connections,
-            nodeCounter: this.nodeCounter
+            nodeCounter: this.nodeCounter,
+            freehandStrokes: this.freehandStrokes
         });
     }
 
@@ -378,6 +385,10 @@ class SupplyChainCanvas {
 
         const panToolEl = document.getElementById('panTool');
         if (panToolEl) panToolEl.addEventListener('click', () => this.setTool('pan'));
+        const penToolEl = document.getElementById('penTool');
+        if (penToolEl) penToolEl.addEventListener('click', () => this.setTool('pen'));
+        const eraserToolEl = document.getElementById('eraserTool');
+        if (eraserToolEl) eraserToolEl.addEventListener('click', () => this.setTool('eraser'));
         const connectToolEl = document.getElementById('connectTool');
         if (connectToolEl) connectToolEl.addEventListener('click', () => this.setTool('connect'));
         const deleteToolEl = document.getElementById('deleteTool');
@@ -406,6 +417,18 @@ class SupplyChainCanvas {
         if (loadExampleBtn) loadExampleBtn.addEventListener('click', this.loadExample.bind(this));
         const generateBtn = document.getElementById('generateBtn');
         if (generateBtn) generateBtn.addEventListener('click', this.generateFromNL.bind(this));
+
+        // Pen thickness control
+        const penThicknessEl = document.getElementById('penThickness');
+        const penThicknessVal = document.getElementById('penThicknessVal');
+        if (penThicknessEl) {
+            this.penThickness = parseInt(penThicknessEl.value, 10) || this.penThickness;
+            if (penThicknessVal) penThicknessVal.textContent = this.penThickness;
+            penThicknessEl.addEventListener('input', (ev) => {
+                this.penThickness = parseInt(ev.target.value, 10) || this.penThickness;
+                if (penThicknessVal) penThicknessVal.textContent = this.penThickness;
+            });
+        }
 
         // Context menu event listeners
         document.getElementById('addConnectedMaterial').addEventListener('click', this.addConnectedMaterial.bind(this));
@@ -583,6 +606,7 @@ class SupplyChainCanvas {
             this.nodes = JSON.parse(JSON.stringify(previousState.nodes));
             this.connections = JSON.parse(JSON.stringify(previousState.connections));
             this.nodeCounter = previousState.nodeCounter;
+            this.freehandStrokes = JSON.parse(JSON.stringify(previousState.freehandStrokes || []));
             this.selectedNodes = [];
             this.connectingFrom = null;
             this.hideContextMenu();
@@ -633,6 +657,23 @@ class SupplyChainCanvas {
         // clear any selected connection when interacting with canvas
         this.selectedConnection = null;
         this.contextMenuConnection = null;
+        // Freehand pen/eraser start
+        if (this.currentTool === 'pen' || this.currentTool === 'eraser') {
+            const pos = this.getMousePos(e);
+            const stroke = {
+                id: `stroke_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                tool: this.currentTool,
+                color: this.penColor || (this.themeColors && this.themeColors.text) || '#000',
+                width: this.penThickness || 4,
+                points: [pos]
+            };
+            this._currentStroke = stroke;
+            this.freehandStrokes.push(stroke);
+            // prevent other interactions while drawing
+            e.preventDefault();
+            this.queueRender();
+            return;
+        }
         // Reset all interaction flags first
         this.isPanning = false;
         this.isDraggingElement = false;
@@ -803,6 +844,12 @@ class SupplyChainCanvas {
     handleMouseMove(e) {
         const pos = this.getMousePos(e);
 
+        // Freehand drawing in progress
+        if (this._currentStroke) {
+            this._currentStroke.points.push(pos);
+            this.queueRender();
+            return;
+        }
         if (this.isPanning) {
             const dx = e.clientX - this.panStart.x;
             const dy = e.clientY - this.panStart.y;
@@ -838,6 +885,15 @@ class SupplyChainCanvas {
     }
 
     handleMouseUp(e) {
+        // If finishing a freehand stroke, finalize it and save
+        if (this._currentStroke) {
+            // finalize current stroke
+            this._currentStroke = null;
+            this.saveState();
+            this.queueRender();
+            return;
+        }
+
         // First reset all interaction states
         const wasInteracting = this.isPanning || this.isDraggingElement || this.isResizing || this.isSelecting;
         this.isPanning = false;
@@ -1073,6 +1129,7 @@ class SupplyChainCanvas {
         this.drawGrid();
         this.drawConnections();
         this.drawNodes();
+        this.drawStrokes();
         this.drawConnectionPreview();
         this.drawSelectionBounds();
         this.drawSelectionRect();
@@ -1380,6 +1437,30 @@ class SupplyChainCanvas {
         this.ctx.restore();
     }
 
+    drawStrokes() {
+        if (!this.freehandStrokes || this.freehandStrokes.length === 0) return;
+        this.freehandStrokes.forEach(stroke => {
+            if (!stroke.points || stroke.points.length === 0) return;
+            this.ctx.save();
+            if (stroke.tool === 'eraser') {
+                this.ctx.globalCompositeOperation = 'destination-out';
+                this.ctx.strokeStyle = 'rgba(0,0,0,1)';
+            } else {
+                this.ctx.globalCompositeOperation = 'source-over';
+                this.ctx.strokeStyle = stroke.color || (this.themeColors && this.themeColors.text) || '#000000';
+            }
+            this.ctx.lineWidth = (stroke.width || this.penThickness || 4) / this.camera.zoom;
+            this.ctx.lineCap = 'round';
+            this.ctx.lineJoin = 'round';
+            this.ctx.beginPath();
+            const pts = stroke.points;
+            this.ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) this.ctx.lineTo(pts[i].x, pts[i].y);
+            this.ctx.stroke();
+            this.ctx.restore();
+        });
+    }
+
     getResizeHandles(bounds) {
         if (!bounds) return {};
         return {
@@ -1506,6 +1587,8 @@ class SupplyChainCanvas {
             arrow: read('--color-info') || '#626c71',
             canvasSurface: read('--color-surface') || '#ffffff'
         };
+        // Pen color default
+        this.penColor = this.themeColors.text || '#000000';
         // Ensure proper defaults for transparency tokens
         if (!this.copySettings.backgroundColor) this.copySettings.backgroundColor = this.themeColors.canvasSurface;
     }
