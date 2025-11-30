@@ -549,7 +549,7 @@ class SupplyChainCanvas {
     }
 
     setTool(toolName) {
-        document.querySelectorAll('#panTool, #connectTool, #deleteTool, #penTool, #eraserTool').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('#panTool, #connectTool, #deleteTool, #penTool, #eraserTool, #materialTool, #activityTool, #textboxTool').forEach(btn => btn.classList.remove('active'));
         if (toolName !== 'select') {
             const toolBtn = document.getElementById(`${toolName}Tool`);
             if (toolBtn) toolBtn.classList.add('active');
@@ -635,6 +635,12 @@ class SupplyChainCanvas {
             container.classList.add('dragging');
         } else if (this.currentTool === 'pan') {
             this.canvas.style.cursor = 'grab';
+        } else if (this.currentTool === 'pen') {
+            this.canvas.style.cursor = 'crosshair';
+            container.classList.add('tool-pen');
+        } else if (this.currentTool === 'eraser') {
+            this.canvas.style.cursor = 'crosshair';
+            container.classList.add('tool-eraser');
         } else if (this.currentTool === 'connect') {
             container.classList.add('tool-connect');
         } else if (this.currentTool === 'delete') {
