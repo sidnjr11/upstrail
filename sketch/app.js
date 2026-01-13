@@ -2125,7 +2125,19 @@ class SupplyChainCanvas {
                 const data = JSON.parse(e.target.result);
                 this.nodes = data.nodes || [];
                 this.connections = data.connections || [];
-                this.nodeCounter = this.nodes.length;
+                
+                // Fix: Calculate max ID instead of length to prevent ID collisions
+                let maxId = 0;
+                this.nodes.forEach(node => {
+                    if (node.id && node.id.startsWith('node_')) {
+                        const num = parseInt(node.id.split('_')[1], 10);
+                        if (!isNaN(num) && num > maxId) {
+                            maxId = num;
+                        }
+                    }
+                });
+                this.nodeCounter = maxId;
+
                 // Ensure textboxes have computed dimensions
                 this.nodes.forEach(n => {
                     if (n.type === 'textbox') {
