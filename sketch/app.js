@@ -2334,11 +2334,11 @@ class SupplyChainCanvas {
             const fromNode = this.nodes.find(n => n.id === conn.from);
             const toNode = this.nodes.find(n => n.id === conn.to);
             
-            // Only draw connections where both nodes are selected
+         // Only draw connections where both nodes are selected
             if (fromNode && toNode && 
                 this.selectedNodes.includes(fromNode) && 
                 this.selectedNodes.includes(toNode)) {
-                this.drawConnectionForExport(tempCtx, fromNode, toNode, exportColors);
+                this.drawConnectionForExport(tempCtx, fromNode, toNode, conn, exportColors);
             }
         });
         
@@ -2369,12 +2369,12 @@ class SupplyChainCanvas {
     }
 
     // Helper method to draw connections for export
-    drawConnectionForExport(ctx, fromNode, toNode, colors = null) {
+    drawConnectionForExport(ctx, fromNode, toNode, conn, colors = null) {
         const headLength = 12;
         const angle = Math.atan2(toNode.y - fromNode.y, toNode.x - fromNode.x);
         const nodeRadius = 30;
         
-        // Calculate connection points (avoid overlapping with nodes)
+        // Calculate connection points
         const adjFromX = fromNode.x + nodeRadius * Math.cos(angle);
         const adjFromY = fromNode.y + nodeRadius * Math.sin(angle);
         const adjToX = toNode.x - nodeRadius * Math.cos(angle);
@@ -2407,6 +2407,22 @@ class SupplyChainCanvas {
         );
         ctx.closePath();
         ctx.fill();
+
+        // --- NEW: Draw Label Text ---
+        if (conn && conn.label) {
+            const midX = (adjFromX + adjToX) / 2;
+            const midY = (adjFromY + adjToY) / 2;
+            
+            ctx.translate(midX, midY);
+            ctx.rotate(angle);
+            
+            ctx.fillStyle = theme.text || (this.themeColors && this.themeColors.text) || '#000000';
+            ctx.font = '12px Arial, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(conn.label, 0, -8);
+        }
+        // -----------------------------
         
         ctx.restore();
     }
