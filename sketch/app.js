@@ -407,6 +407,32 @@ class SupplyChainCanvas {
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
         document.addEventListener('keyup', (e) => { if (e.key === 'Control') this.isCtrlPressed = false; });
 
+        // --- NEW FEATURES BUTTON LOGIC START ---
+        const featuresBtn = document.getElementById('featuresBtn');
+        const featuresModal = document.getElementById('featuresModal');
+        const closeFeaturesBtn = document.getElementById('closeFeaturesBtn');
+
+        if (featuresBtn && featuresModal) {
+            featuresBtn.addEventListener('click', () => {
+                featuresModal.classList.remove('hidden');
+            });
+        }
+
+        if (closeFeaturesBtn && featuresModal) {
+            closeFeaturesBtn.addEventListener('click', () => {
+                featuresModal.classList.add('hidden');
+            });
+        }
+
+        if (featuresModal) {
+            window.addEventListener('click', (e) => {
+                if (e.target === featuresModal) {
+                    featuresModal.classList.add('hidden');
+                }
+            });
+        }
+        // --- NEW FEATURES BUTTON LOGIC END ---
+
         const undoBtn = document.getElementById('undoBtn');
         if (undoBtn) undoBtn.addEventListener('click', this.undo.bind(this));
         const saveBtn = document.getElementById('saveBtn');
