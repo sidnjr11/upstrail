@@ -16,11 +16,14 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
         <header class="header">
             <div class="header-content">
                 <h1 class="header-title">Supply Chain Canvas</h1>
                 <div class="header-actions">
+                    <button id="featuresBtn" class="btn btn--accent btn--sm" title="See what you can do">
+                        <span>✨ Features</span>
+                    </button>
+
                     <button id="undoBtn" class="btn btn--secondary btn--sm" disabled>
                         <span>Undo</span>
                     </button>
@@ -36,11 +39,8 @@
             </div>
         </header>
 
-        <!-- Main Content -->
         <div class="main-content">
-            <!-- Sidebar -->
             <aside class="sidebar">
-                <!-- Tools Section -->
                 <div class="sidebar-section">
                     <h3>Tools</h3>
                     <div class="tool-grid">
@@ -76,7 +76,6 @@
                 </div>
             </div>
 
-                <!-- Create Elements Section -->
                 <div class="sidebar-section">
                     <h3>Create Elements</h3>
                     <div class="tool-grid">
@@ -98,14 +97,12 @@
                     </div>
                 </div>
 
-                <!-- Natural Language Generation -->
                 <div class="sidebar-section">
                     <h3>Generate from Description</h3>
                     <textarea id="nlInput" class="form-control nl-input" placeholder="Describe your supply chain... e.g., 'Two raw materials consumed in a BOM to produce a finished good that is distributed to a DC'"></textarea>
                     <button id="generateBtn" class="btn btn--primary btn--full-width">Generate Diagram</button>
                 </div>
 
-                <!-- Connection Rules -->
                 <div class="sidebar-section">
                     <h3>Connection Rules</h3>
                     <div class="rules-list">
@@ -116,7 +113,6 @@
                     </div>
                 </div>
 
-                <!-- Usage Instructions -->
                 <div class="sidebar-section">
                     <h3>How to Use</h3>
                     <div class="usage-list">
@@ -128,7 +124,6 @@
                     </div>
                 </div>
 
-                <!-- Keyboard Shortcuts -->
                 <div class="sidebar-section">
                     <h3>Shortcuts</h3>
                     <div class="shortcuts-list">
@@ -155,7 +150,6 @@
                     </div>
                 </div>
 
-                <!-- Debug Information -->
                 <div class="debug-info">
                     <h3>Debug Info</h3>
                     <div class="debug-item">
@@ -173,13 +167,11 @@
                 </div>
             </aside>
 
-            <!-- Canvas Area -->
             <div class="canvas-container">
                 <div class="canvas-wrapper">
                     <canvas id="canvas" width="1200" height="800"></canvas>
                 </div>
 
-                <!-- Zoom Controls -->
                 <div class="zoom-controls">
                     <button id="zoomOutBtn" class="btn btn--sm">-</button>
                     <span id="zoomLevel">100%</span>
@@ -187,7 +179,6 @@
                     <button id="zoomResetBtn" class="btn btn--sm">Reset</button>
                 </div>
 
-                <!-- Status Bar -->
                 <div class="status-bar">
                     <span id="statusText">Canvas ready. Default mode is select - drag elements to move. Drag tools from sidebar to create new elements.</span>
                     <span id="dragStatus" style="margin-left: 20px;">Ready</span>
@@ -196,9 +187,7 @@
         </div>
     </div>
 
-    <!-- Context Menu -->
     <div id="contextMenu" class="context-menu hidden">
-        <!-- Single node items -->
         <div id="addConnectedMaterial" class="context-menu-item single-node-item">
             Add Connected Material
         </div>
@@ -219,7 +208,6 @@
             Delete Connection
         </div>
         
-        <!-- Multi-selection items -->
         <div id="duplicateSelection" class="context-menu-item multi-node-item">
             Duplicate Selection
         </div>
@@ -227,7 +215,6 @@
             Delete Selection
         </div>
         
-        <!-- Copy for Excel - available for both single and multi-selection -->
         <div class="context-menu-divider"></div>
         <div id="copySelection" class="context-menu-item">
             📄 Copy
@@ -241,7 +228,6 @@
         </div>
     </div>
 
-    <!-- Edit Modal -->
     <div id="editModal" class="modal hidden">
         <div class="modal-content">
             <h3>Edit Content</h3>
@@ -253,10 +239,52 @@
         </div>
     </div>
 
-    <!-- Hidden file input for loading -->
+    <div id="featuresModal" class="modal hidden">
+        <div class="modal-content features-modal-content">
+            <div class="features-header">
+                <h2>🚀 Supercharge Your Planning</h2>
+                <button id="closeFeaturesBtn" class="close-btn">&times;</button>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Create complex supply chain diagrams in seconds.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🖱️</div>
+                    <h3>Drag & Drop</h3>
+                    <p>Drag <strong>Materials</strong> & <strong>Activities</strong> directly from the sidebar.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h3>Smart Connect</h3>
+                    <p><strong>Right-click</strong> on any node to connect it instantly to others or add connected steps.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <h3>Copy to Excel/Teams</h3>
+                    <p>Select & press <strong>Ctrl + C</strong>. Pastes a clean image (no grid!) directly into Excel or Teams.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3>Save & Resume</h3>
+                    <p>Download your work and <strong>Upload</strong> it back later to start exactly where you left off.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📝</div>
+                    <h3>Flexible Text</h3>
+                    <p>Add and <strong>Connect Text Boxes</strong> for custom annotations anywhere.</p>
+                </div>
+            </div>
+            <div class="features-footer">
+                <button class="btn btn--primary btn--lg" id="gotItBtn">Got it, let's sketch!</button>
+            </div>
+        </div>
+    </div>
+
     <input type="file" id="fileInput" accept=".json" style="display: none;">
 
-    <!-- JavaScript -->
     <script src="app.js"></script>
 </body>
 </html>
