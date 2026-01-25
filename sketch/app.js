@@ -46,21 +46,13 @@ class StateManager {
     }
 }
 
-/**
- * @class NLPParser
- * An enhanced parser for interpreting natural language descriptions of supply chains.
- * It identifies quantities, materials, activities, and transitional phrases to
- * build a structured representation of the supply chain flow.
- */
 class NLPParser {
     constructor() {
-        // Dictionary to map quantity words to numbers. 'multiple' and 'several' default to 3.
         this.quantityMap = {
             'one': 1, 'a': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
             'multiple': 3, 'several': 3, 'many': 3, 'a few': 3
         };
 
-        // Keywords for identifying material nodes.
         this.materialKeywords = [
             'raw material', 'raw materials', 'component', 'components', 'part', 'parts', 'ingredient', 'ingredients',
             'finished good', 'finished goods', 'finished product', 'finished products', 'product', 'products', 'item', 'items',
@@ -69,27 +61,19 @@ class NLPParser {
             'distribution center', 'dc', 'hub', 'hubs', 'depot', 'depots', 'plant'
         ];
 
-        // Keywords for identifying activity nodes.
         this.activityKeywords = [
             'manufacturing', 'assembly', 'processing', 'production', 'produce', 'create', 'make', 'build',
             'distribution', 'shipping', 'delivery', 'logistics', 'transportation', 'distribute', 'ship', 'deliver',
             'consumed in a bom', 'consumed', 'sent', 'transported', 'shipped', 'truck'
         ];
         
-        // Words that indicate a transition but don't create a node.
         this.transitionWords = ['then', 'next', 'after', 'to', 'from', 'and', 'being', 'is', 'at'];
     }
 
-    /**
-     * Parses complex sentences involving movement (e.g., from/to/via).
-     * @param {string} text - The user's input string.
-     * @returns {Array|null} An array of structured "step" objects or null if the pattern doesn't match.
-     */
     parseMovement(text) {
         const fromPattern = /from ([\w\s]+?)(?=\sto\s|via\s|$)/;
         const toPattern = /to ([\w\s]+?)(?=\sfrom\s|via\s|$)/;
         const viaPattern = /via ([\w\s]+?)(?=\sfrom\s|to\s|$)/;
-        // Pattern to capture the material, which usually comes before verbs like "sent", "transported", etc.
         const materialPattern = /([\w\s]+?)(?=\sbeing sent|\sis sent|\sbeing transported|\sis transported)/;
 
         const fromMatch = text.match(fromPattern);
@@ -97,7 +81,6 @@ class NLPParser {
         let viaMatch = text.match(viaPattern);
         let materialMatch = text.match(materialPattern);
         
-        // A more general material match if the specific one fails
         if (!materialMatch) {
             materialMatch = text.match(/(a|one|two|three|multiple|several)?\s?([\w\s]+?)(?=\sfrom\s)/);
         }
@@ -107,7 +90,6 @@ class NLPParser {
         let activity = viaMatch ? this.findKeyword(viaMatch[1].trim()) : null;
         const material = materialMatch ? this.findKeyword(materialMatch[1].trim() || materialMatch[2].trim()) : null;
 
-        // If 'via' keyword is not present, infer activity from verbs.
         if (!activity) {
             for (const verb of ['sent', 'transported', 'shipped']) {
                 if (text.includes(verb)) {
@@ -128,11 +110,6 @@ class NLPParser {
         return null;
     }
 
-    /**
-     * Finds the most specific keyword in a given phrase.
-     * @param {string} phrase - A segment of the input text.
-     * @returns {Object} An object with the type and capitalized label.
-     */
     findKeyword(phrase) {
         const allKeywords = [...this.materialKeywords, ...this.activityKeywords];
         allKeywords.sort((a, b) => b.length - a.length);
@@ -146,24 +123,14 @@ class NLPParser {
         return { type: 'material', label: this.capitalize(phrase) };
     }
 
-    /**
-     * The main parse method. Tries complex parsing first, then falls back to simple tokenization.
-     * @param {string} text - The natural language input from the user.
-     * @returns {Array<Object>} A list of structured steps or simple tokens.
-     */
     parse(text) {
         const movementSteps = this.parseMovement(text.toLowerCase());
         if (movementSteps) {
             return movementSteps;
         }
-        return this.tokenize(text); // Fallback to simple tokenization
+        return this.tokenize(text);
     }
 
-    /**
-     * Simple tokenizer for sequential supply chain descriptions.
-     * @param {string} text - The user's input string.
-     * @returns {Array<Object>} A list of tokens.
-     */
     tokenize(text) {
         const words = text.toLowerCase().replace(/,/g, '').split(/\s+/);
         const tokens = [];
@@ -213,6 +180,7 @@ class SupplyChainCanvas {
         this.nodes = [];
         this.connections = [];
         this.selectedNodes = [];
+        this.selectedStrokes = []; // New: Track selected strokes
         this.hoveredNode = null;
         this.currentTool = 'select';
         this.isDraggingElement = false;
@@ -229,20 +197,18 @@ class SupplyChainCanvas {
         this.draggedToolType = null;
         this.mousePos = { x: 0, y: 0 };
         this.copySettings = {
-            padding: 20, // Default padding in pixels
-            backgroundColor: '#FFFFFF' // White background
+            padding: 20,
+            backgroundColor: '#FFFFFF'
         };
         // Freehand drawing state
-        this.freehandStrokes = []; // array of { id, tool: 'pen'|'eraser', color, width, points: [{x,y}], composite }
+        this.freehandStrokes = [];
         this._currentStroke = null;
         this.penThickness = 4;
-        this.penColor = null; // resolved from theme on init
+        this.penColor = null;
 
-        // Offscreen canvas for strokes to allow eraser to only affect strokes layer
         this.strokesCanvas = document.createElement('canvas');
         this.strokesCtx = this.strokesCanvas.getContext('2d');
 
-        // New properties for zoom, pan, and resize
         this.camera = { x: 0, y: 0, zoom: 1 };
         this.isPanning = false;
         this.panStart = { x: 0, y: 0 };
@@ -251,7 +217,7 @@ class SupplyChainCanvas {
         this.resizeHandle = null;
         this.selectionBounds = null;
         this.stateManager = new StateManager();
-        this.nlpParser = new NLPParser(); // Use the new enhanced parser
+        this.nlpParser = new NLPParser();
         this.isRendering = false;
 
         this.sampleData = {
@@ -274,7 +240,6 @@ class SupplyChainCanvas {
         this.saveInitialState();
         this.queueRender();
 
-        // Global mouseup to always reset cursor and flags
         document.addEventListener('mouseup', (e) => {
             if (this.isPanning) {
                 this.isPanning = false;
@@ -383,9 +348,12 @@ class SupplyChainCanvas {
     }
 
     initEventListeners() {
-        // Theme toggle button (added in index.html)
         const themeBtn = document.getElementById('themeToggleBtn');
         if (themeBtn) themeBtn.addEventListener('click', () => this.toggleTheme());
+
+        // New Select Tool Button Listener
+        const selectToolEl = document.getElementById('selectTool');
+        if (selectToolEl) selectToolEl.addEventListener('click', () => this.setTool('select'));
 
         const panToolEl = document.getElementById('panTool');
         if (panToolEl) panToolEl.addEventListener('click', () => this.setTool('pan'));
@@ -407,23 +375,28 @@ class SupplyChainCanvas {
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
         document.addEventListener('keyup', (e) => { if (e.key === 'Control') this.isCtrlPressed = false; });
 
-        // --- NEW FEATURES BUTTON LOGIC START ---
+        // --- FIXED: Features Modal & Got It Button Logic ---
         const featuresBtn = document.getElementById('featuresBtn');
         const featuresModal = document.getElementById('featuresModal');
         const closeFeaturesBtn = document.getElementById('closeFeaturesBtn');
+        const gotItBtn = document.getElementById('gotItBtn'); // Get reference
 
         if (featuresBtn && featuresModal) {
             featuresBtn.addEventListener('click', () => {
                 featuresModal.classList.remove('hidden');
             });
         }
-
         if (closeFeaturesBtn && featuresModal) {
             closeFeaturesBtn.addEventListener('click', () => {
                 featuresModal.classList.add('hidden');
             });
         }
-
+        // Listener for the "Got it" button
+        if (gotItBtn && featuresModal) {
+            gotItBtn.addEventListener('click', () => {
+                featuresModal.classList.add('hidden');
+            });
+        }
         if (featuresModal) {
             window.addEventListener('click', (e) => {
                 if (e.target === featuresModal) {
@@ -431,7 +404,7 @@ class SupplyChainCanvas {
                 }
             });
         }
-        // --- NEW FEATURES BUTTON LOGIC END ---
+        // ---------------------------------------------------
 
         const undoBtn = document.getElementById('undoBtn');
         if (undoBtn) undoBtn.addEventListener('click', this.undo.bind(this));
@@ -448,7 +421,6 @@ class SupplyChainCanvas {
         const generateBtn = document.getElementById('generateBtn');
         if (generateBtn) generateBtn.addEventListener('click', this.generateFromNL.bind(this));
 
-        // Pen thickness control
         const penThicknessEl = document.getElementById('penThickness');
         const penThicknessVal = document.getElementById('penThicknessVal');
         if (penThicknessEl) {
@@ -460,7 +432,6 @@ class SupplyChainCanvas {
             });
         }
 
-        // Context menu event listeners
         document.getElementById('addConnectedMaterial').addEventListener('click', this.addConnectedMaterial.bind(this));
         document.getElementById('addConnectedActivity').addEventListener('click', this.addConnectedActivity.bind(this));
         document.getElementById('editLabel').addEventListener('click', this.editLabel.bind(this));
@@ -468,7 +439,6 @@ class SupplyChainCanvas {
         document.getElementById('duplicateSelection').addEventListener('click', this.duplicateSelection.bind(this));
         document.getElementById('deleteSelection').addEventListener('click', this.deleteSelection.bind(this));
 
-        // New context menu item for simple copy (stores to internal clipboard)
         const copySelectionEl = document.getElementById('copySelection');
         if (copySelectionEl) copySelectionEl.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); this.copySelectionToClipboard(); this.hideContextMenu(); });
         const pasteSelectionEl = document.getElementById('pasteSelection');
@@ -498,7 +468,6 @@ class SupplyChainCanvas {
             if (e.target === editModal) this.cancelEdit();
         });
 
-        // Zoom listeners
         this.canvas.addEventListener('wheel', this.handleWheel.bind(this));
         document.getElementById('zoomInBtn').addEventListener('click', () => this.zoom(1.2));
         document.getElementById('zoomOutBtn').addEventListener('click', () => this.zoom(0.8));
@@ -519,13 +488,11 @@ class SupplyChainCanvas {
             return;
         }
 
-        // Don't handle shortcuts when typing in text inputs
         if (e.target.id === 'nlInput' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
             return;
         }
 
         if (e.ctrlKey || e.metaKey) {
-            // Ctrl/Cmd + shortcuts
             switch (e.key.toLowerCase()) {
                 case 'z': 
                     e.preventDefault(); 
@@ -536,19 +503,15 @@ class SupplyChainCanvas {
                     this.cutSelected(); 
                     break;
                 case 'c':
-                    // Ctrl+C: export image for Excel AND copy selection to internal clipboard
                     e.preventDefault();
                     if (this.selectedNodes.length > 0) {
-                        // trigger image copy (async)
                         this.copySelectionForExcel();
-                        // also copy to internal clipboard for canvas paste
                         this.copySelectionToClipboard();
                     } else {
                         this.showStatus('Select elements to copy', 'warning');
                     }
                     break;
                 case 'v':
-                    // Ctrl+V -> paste from internal clipboard (duplicate on canvas)
                     e.preventDefault();
                     this.pasteFromClipboard();
                     break;
@@ -568,20 +531,22 @@ class SupplyChainCanvas {
                 break;
         }
 
-        // Quick theme toggle when pressing 'T' (not while typing)
         if (!e.ctrlKey && !e.metaKey && e.key && e.key.toLowerCase() === 't') {
             this.toggleTheme();
         }
     }
 
     setTool(toolName) {
-        document.querySelectorAll('#panTool, #connectTool, #deleteTool, #penTool, #eraserTool, #materialTool, #activityTool, #textboxTool').forEach(btn => btn.classList.remove('active'));
+        // Clear active class from all tools including the new select tool
+        document.querySelectorAll('#selectTool, #panTool, #connectTool, #deleteTool, #penTool, #eraserTool, #materialTool, #activityTool, #textboxTool').forEach(btn => btn.classList.remove('active'));
         if (toolName !== 'select') {
             const toolBtn = document.getElementById(`${toolName}Tool`);
             if (toolBtn) toolBtn.classList.add('active');
+        } else {
+             const toolBtn = document.getElementById(`selectTool`);
+             if (toolBtn) toolBtn.classList.add('active');
         }
         this.currentTool = toolName;
-        // Preserve an existing `connectingFrom` when switching to the connect tool
         if (toolName !== 'connect') this.connectingFrom = null;
         this.updateCanvasCursor();
         this.updateStatusText();
@@ -590,6 +555,7 @@ class SupplyChainCanvas {
 
     deselectAll() {
         this.selectedNodes = [];
+        this.selectedStrokes = []; // Deselect strokes
         this.connectingFrom = null;
         this.selectedConnection = null;
         this.contextMenuConnection = null;
@@ -598,6 +564,7 @@ class SupplyChainCanvas {
         this.queueRender();
     }
 
+    // Updated delete to handle strokes
     deleteSelected() {
         if (this.selectedConnection) {
             this.saveState();
@@ -607,17 +574,22 @@ class SupplyChainCanvas {
             return;
         }
 
-        if (this.selectedNodes.length > 0) {
+        if (this.selectedNodes.length > 0 || this.selectedStrokes.length > 0) {
             this.saveState();
             this.selectedNodes.forEach(node => this.deleteNode(node, false));
             this.selectedNodes = [];
+            // Remove selected strokes
+            if (this.selectedStrokes.length > 0) {
+                this.freehandStrokes = this.freehandStrokes.filter(s => !this.selectedStrokes.includes(s));
+                this.selectedStrokes = [];
+                this.showStatus('Deleted selected items', 'success');
+            }
             this.queueRender();
         }
     }
 
     cutSelected() {
         if (this.selectedNodes.length > 0) {
-            // Copy selected nodes and their internal connections to clipboard
             const nodesCopy = JSON.parse(JSON.stringify(this.selectedNodes));
             const selectedIds = new Set(this.selectedNodes.map(n => n.id));
             const connsCopy = this.connections.filter(c => selectedIds.has(c.from) && selectedIds.has(c.to)).map(c => JSON.parse(JSON.stringify(c)));
@@ -638,6 +610,7 @@ class SupplyChainCanvas {
             this.nodeCounter = previousState.nodeCounter;
             this.freehandStrokes = JSON.parse(JSON.stringify(previousState.freehandStrokes || []));
             this.selectedNodes = [];
+            this.selectedStrokes = [];
             this.connectingFrom = null;
             this.hideContextMenu();
             this.queueRender();
@@ -649,11 +622,8 @@ class SupplyChainCanvas {
 
     updateCanvasCursor() {
         const container = this.canvas.parentElement.parentElement;
-        // Clear all tool classes first
         container.className = container.className.replace(/tool-\w+/g, '').replace(/dragging/g, '');
-        // Reset to default first
         this.canvas.style.cursor = 'default';
-        // Then apply the appropriate cursor based on state
         if (this.isPanning) {
             this.canvas.style.cursor = 'grabbing';
         } else if (this.isDraggingElement) {
@@ -688,12 +658,28 @@ class SupplyChainCanvas {
         document.getElementById('dragStatus').textContent = status;
     }
 
+    // Helper to detect strokes at position
+    getStrokeAt(x, y) {
+        if (!this.freehandStrokes || this.freehandStrokes.length === 0) return null;
+        const hitDist = 5;
+        // Check simple proximity to points
+        for (let i = this.freehandStrokes.length - 1; i >= 0; i--) {
+            const stroke = this.freehandStrokes[i];
+            if (stroke.tool === 'eraser') continue;
+            for (const pt of stroke.points) {
+                if (Math.abs(pt.x - x) < hitDist && Math.abs(pt.y - y) < hitDist) {
+                    return stroke;
+                }
+            }
+        }
+        return null;
+    }
+
     handleMouseDown(e) {
         this.hideContextMenu();
-        // clear any selected connection when interacting with canvas
         this.selectedConnection = null;
         this.contextMenuConnection = null;
-        // Freehand pen/eraser start
+        
         if (this.currentTool === 'pen' || this.currentTool === 'eraser') {
             const pos = this.getMousePos(e);
             const stroke = {
@@ -705,12 +691,11 @@ class SupplyChainCanvas {
             };
             this._currentStroke = stroke;
             this.freehandStrokes.push(stroke);
-            // prevent other interactions while drawing
             e.preventDefault();
             this.queueRender();
             return;
         }
-        // Reset all interaction flags first
+
         this.isPanning = false;
         this.isDraggingElement = false;
         this.isResizing = false;
@@ -719,6 +704,7 @@ class SupplyChainCanvas {
         const clickedNode = this.getNodeAt(pos.x, pos.y);
         const clickedHandle = this.getResizeHandleAt(pos.x, pos.y);
         const clickedConn = this.getConnectionAt(pos.x, pos.y);
+        const clickedStroke = this.getStrokeAt(pos.x, pos.y);
 
         if (this.isCtrlPressed || this.currentTool === 'pan') {
             this.isPanning = true;
@@ -734,21 +720,44 @@ class SupplyChainCanvas {
                     this.resizeHandle = clickedHandle;
                     this.selectionBounds.original = { ...this.selectionBounds };
                     this.selectedNodes.forEach(n => n.original = { x: n.x, y: n.y });
-                } else if (clickedNode) {
-                    if (this.isClickOnLabel(pos, clickedNode)) { 
-                        this.enterLabelEditMode(clickedNode); 
-                        return; 
+                } else if (clickedNode || clickedStroke) {
+                    // Node click logic
+                    if (clickedNode) {
+                        if (this.isClickOnLabel(pos, clickedNode)) { 
+                            this.enterLabelEditMode(clickedNode); 
+                            return; 
+                        }
+                        if (!this.selectedNodes.includes(clickedNode)) {
+                            this.selectedNodes = [clickedNode];
+                            this.selectedStrokes = []; // Clear stroke selection
+                        }
+                    } 
+                    // Stroke click logic
+                    else if (clickedStroke) {
+                         if (!this.selectedStrokes.includes(clickedStroke)) {
+                            this.selectedStrokes = [clickedStroke];
+                            this.selectedNodes = []; // Clear node selection
+                        }
                     }
-                    if (!this.selectedNodes.includes(clickedNode)) this.selectedNodes = [clickedNode];
+
                     this.isDraggingElement = true;
                     this.dragOffset = { x: pos.x, y: pos.y };
+                    
+                    // Setup drag start for nodes
                     this.selectedNodes.forEach(n => n.dragStart = { x: n.x, y: n.y });
+                    
+                    // Setup drag start for strokes (need to store original points)
+                    this.selectedStrokes.forEach(s => {
+                         s.dragStartPoints = s.points.map(p => ({x: p.x, y: p.y}));
+                    });
+
                     this.updateCanvasCursor();
-                    this.updateDragStatus(`Moving ${this.selectedNodes.length} element(s)`);
+                    const count = this.selectedNodes.length + this.selectedStrokes.length;
+                    this.updateDragStatus(`Moving ${count} item(s)`);
                 } else if (clickedConn) {
-                    // select connection on left click when in select mode
                     this.selectedConnection = clickedConn;
                     this.selectedNodes = [];
+                    this.selectedStrokes = [];
                     this.updateCanvasCursor();
                     this.updateDragStatus(`Selected 1 connection`);
                     this.queueRender();
@@ -757,6 +766,7 @@ class SupplyChainCanvas {
                     this.isSelecting = true;
                     this.selectionRect = { startX: pos.x, startY: pos.y, endX: pos.x, endY: pos.y };
                     this.selectedNodes = [];
+                    this.selectedStrokes = [];
                 }
                 break;
             case 'connect':
@@ -778,6 +788,11 @@ class SupplyChainCanvas {
                     this.saveState();
                     this.deleteNode(clickedNode);
                     this.setTool('select');
+                } else if (clickedStroke) {
+                    this.saveState();
+                    this.freehandStrokes = this.freehandStrokes.filter(s => s !== clickedStroke);
+                    this.showStatus('Deleted sketch stroke', 'success');
+                    this.queueRender();
                 } else {
                     const connection = this.getConnectionAt(pos.x, pos.y);
                     if (connection) {
@@ -820,7 +835,6 @@ class SupplyChainCanvas {
 
     enterConnectionEditMode(connection) {
         this.editingConnection = connection;
-        // Deselect nodes to focus editing on connection
         this.selectedNodes = [];
         const modal = document.getElementById('editModal');
         const input = document.getElementById('editInput');
@@ -838,24 +852,19 @@ class SupplyChainCanvas {
         const input = document.getElementById('editInput');
         document.querySelector('#editModal h3').textContent = 'Edit Text Content';
         input.value = node.label === 'Click to edit text' ? '' : node.label;
-        // Size the modal and textarea to visually match the node, but constrain to sensible min/max
         const modalContent = modal.querySelector('.modal-content');
-        // compute node dims (fallback to defaults)
         const fontSize = node.fontSize || 12;
         const dims = this.computeTextBoxDimensions(node.label || '', fontSize);
         const nodeW = node.width || dims.width || 120;
         const nodeH = node.height || dims.height || 40;
 
-        // Constrain modal width between 420px and viewport width-40 (bigger edit area)
         const viewportW = Math.max(320, window.innerWidth || 800);
         const desiredModalMin = Math.min(Math.max(nodeW + 80, 420), viewportW - 40);
         if (modalContent) modalContent.style.minWidth = `${desiredModalMin}px`;
 
-        // Set textarea width/height but keep it responsive inside modal
         input.style.width = `${Math.min(nodeW, desiredModalMin - 80)}px`;
         input.style.maxWidth = '100%';
         input.style.height = `${Math.max(nodeH, 120)}px`;
-        // Attach live input handler to update the node while editing
         this._editInputHandler = (e) => {
             const newContent = e.target.value;
             if (this.editingNode) {
@@ -863,7 +872,6 @@ class SupplyChainCanvas {
                 const dimsLive = this.computeTextBoxDimensions(this.editingNode.label, this.editingNode.fontSize || 12);
                 this.editingNode.width = dimsLive.width;
                 this.editingNode.height = dimsLive.height;
-                // update textarea size responsively (use larger minimum)
                 const desiredModalMinLive = Math.min(Math.max(dimsLive.width + 80, 420), viewportW - 40);
                 if (modalContent) modalContent.style.minWidth = `${desiredModalMinLive}px`;
                 input.style.width = `${Math.min(dimsLive.width, desiredModalMinLive - 80)}px`;
@@ -880,7 +888,6 @@ class SupplyChainCanvas {
     handleMouseMove(e) {
         const pos = this.getMousePos(e);
 
-        // Freehand drawing in progress
         if (this._currentStroke) {
             this._currentStroke.points.push(pos);
             this.queueRender();
@@ -909,28 +916,37 @@ class SupplyChainCanvas {
             return;
         }
 
-        if (this.isDraggingElement && this.selectedNodes.length > 0) {
+        // Updated drag logic for nodes AND strokes
+        if (this.isDraggingElement && (this.selectedNodes.length > 0 || this.selectedStrokes.length > 0)) {
             const dx = pos.x - this.dragOffset.x;
             const dy = pos.y - this.dragOffset.y;
+            
             this.selectedNodes.forEach(node => {
                 node.x = node.dragStart.x + dx;
                 node.y = node.dragStart.y + dy;
             });
+
+            this.selectedStrokes.forEach(stroke => {
+                if (stroke.dragStartPoints) {
+                    stroke.points = stroke.dragStartPoints.map(p => ({
+                        x: p.x + dx,
+                        y: p.y + dy
+                    }));
+                }
+            });
+
             this.queueRender();
         }
     }
 
     handleMouseUp(e) {
-        // If finishing a freehand stroke, finalize it and save
         if (this._currentStroke) {
-            // finalize current stroke
             this._currentStroke = null;
             this.saveState();
             this.queueRender();
             return;
         }
 
-        // First reset all interaction states
         const wasInteracting = this.isPanning || this.isDraggingElement || this.isResizing || this.isSelecting;
         this.isPanning = false;
         this.isDraggingElement = false;
@@ -943,7 +959,7 @@ class SupplyChainCanvas {
             this.queueRender();
         }
 
-        if (wasInteracting && this.selectedNodes.length > 0) {
+        if (wasInteracting && (this.selectedNodes.length > 0 || this.selectedStrokes.length > 0)) {
             this.saveState();
         }
 
@@ -952,14 +968,15 @@ class SupplyChainCanvas {
         }
 
         this.updateDragStatus('Ready');
-        // Force cursor update after ALL state changes
         setTimeout(() => this.updateCanvasCursor(), 0);
         this.updateCanvasCursor();
     }
 
+    // Updated to include strokes in selection
     selectNodesInRect() {
         if (!this.selectionRect) return;
         this.selectedNodes = [];
+        this.selectedStrokes = [];
         const x1 = Math.min(this.selectionRect.startX, this.selectionRect.endX);
         const y1 = Math.min(this.selectionRect.startY, this.selectionRect.endY);
         const x2 = Math.max(this.selectionRect.startX, this.selectionRect.endX);
@@ -970,13 +987,22 @@ class SupplyChainCanvas {
                 this.selectedNodes.push(node);
             }
         });
+
+        // Check strokes
+        this.freehandStrokes.forEach(stroke => {
+             // Simple check: if any point is in rect
+             const inRect = stroke.points.some(p => p.x > x1 && p.x < x2 && p.y > y1 && p.y < y2);
+             if (inRect) {
+                 this.selectedStrokes.push(stroke);
+             }
+        });
+
         this.updateSelectionBounds();
     }
 
     handleRightClick(e) {
         e.preventDefault();
         e.stopPropagation();
-        // Reset all interaction states
         this.isPanning = false;
         this.isDraggingElement = false;
         this.isResizing = false;
@@ -995,7 +1021,6 @@ class SupplyChainCanvas {
             this.showContextMenu(e.clientX, e.clientY);
             this.queueRender();
         } else if (clickedConn) {
-            // select the connection for possible deletion
             this.selectedNodes = [];
             this.selectedConnection = clickedConn;
             this.contextMenuConnection = clickedConn;
@@ -1003,15 +1028,12 @@ class SupplyChainCanvas {
             this.showContextMenu(e.clientX, e.clientY);
             this.queueRender();
         } else {
-            // Right-click on blank canvas: show context menu so paste (if present) is available
             this.selectedNodes = [];
             this.contextMenuNode = null;
             this.contextMenuConnection = null;
             this.selectedConnection = null;
             this.showContextMenu(e.clientX, e.clientY);
         }
-
-        // Ensure cursor is reset
         this.updateCanvasCursor();
     }
 
@@ -1052,7 +1074,6 @@ class SupplyChainCanvas {
             node.width = 120; 
             node.height = 40; 
             node.fontSize = 12; 
-            // Compute size to fit label
             const dims = this.computeTextBoxDimensions(node.label, node.fontSize);
             node.width = dims.width;
             node.height = dims.height;
@@ -1091,7 +1112,6 @@ class SupplyChainCanvas {
     }
 
     canConnect(nodeA, nodeB) {
-        // Enforce alternating pattern for material and activity nodes
         if (nodeA.id === nodeB.id) return false;
         if (nodeA.type === 'textbox' || nodeB.type === 'textbox') return true;
         return nodeA.type !== nodeB.type;
@@ -1170,11 +1190,8 @@ class SupplyChainCanvas {
         this.drawSelectionRect();
 
         this.ctx.restore();
-        // Ensure strokes canvas size matches main canvas
         this.updateStrokesCanvasSize();
-        // Render stroke layer (draws onto strokesCanvas)
         this.drawStrokes();
-        // Composite stroke layer on top of main canvas (screen coords)
         this.ctx.drawImage(this.strokesCanvas, 0, 0);
     }
 
@@ -1338,9 +1355,7 @@ class SupplyChainCanvas {
             const adjToX = to.x - nodeRadius * Math.cos(angle);
             const adjToY = to.y - nodeRadius * Math.sin(angle);
 
-            // Draw the connection line / arrow
             if (this.selectedConnection && this.selectedConnection.from === conn.from && this.selectedConnection.to === conn.to) {
-                // Highlighted
                 this.ctx.save();
                 this.ctx.strokeStyle = this.themeColors.primary || '#007bff';
                 this.ctx.lineWidth = 4 / this.camera.zoom;
@@ -1369,7 +1384,6 @@ class SupplyChainCanvas {
                 this.drawArrow(from.x, from.y, to.x, to.y);
             }
 
-            // Draw connection label if present
             if (conn.label) {
                 const midX = (adjFromX + adjToX) / 2;
                 const midY = (adjFromY + adjToY) / 2;
@@ -1426,8 +1440,39 @@ class SupplyChainCanvas {
         this.ctx.restore();
     }
 
+    // Updated calculateSelectionBounds to include strokes
+    calculateSelectionBounds() {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const padding = 20;
+
+        if (this.selectedNodes.length === 0 && this.selectedStrokes.length === 0) return null;
+
+        this.selectedNodes.forEach(node => {
+            minX = Math.min(minX, node.x);
+            minY = Math.min(minY, node.y);
+            maxX = Math.max(maxX, node.x);
+            maxY = Math.max(maxY, node.y);
+        });
+
+        this.selectedStrokes.forEach(stroke => {
+            stroke.points.forEach(p => {
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+            });
+        });
+
+        return {
+            x: minX - padding,
+            y: minY - padding,
+            width: (maxX - minX) + 2 * padding,
+            height: (maxY - minY) + 2 * padding
+        };
+    }
+
     updateSelectionBounds() {
-        if (this.selectedNodes.length > 1) {
+        if (this.selectedNodes.length > 0 || this.selectedStrokes.length > 0) {
             this.selectionBounds = this.calculateSelectionBounds();
         } else {
             this.selectionBounds = null;
@@ -1445,25 +1490,6 @@ class SupplyChainCanvas {
             this.ctx.restore();
             this.drawResizeHandles(bounds);
         }
-    }
-
-    calculateSelectionBounds() {
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        const padding = 40;
-
-        this.selectedNodes.forEach(node => {
-            minX = Math.min(minX, node.x);
-            minY = Math.min(minY, node.y);
-            maxX = Math.max(maxX, node.x);
-            maxY = Math.max(maxY, node.y);
-        });
-
-        return {
-            x: minX - padding,
-            y: minY - padding,
-            width: (maxX - minX) + 2 * padding,
-            height: (maxY - minY) + 2 * padding
-        };
     }
 
     drawResizeHandles(bounds) {
@@ -1485,24 +1511,27 @@ class SupplyChainCanvas {
         if (this.strokesCanvas.width !== w || this.strokesCanvas.height !== h) {
             this.strokesCanvas.width = w;
             this.strokesCanvas.height = h;
-            // When resizing, keep existing strokes (we re-render from stroke data each frame)
         }
     }
 
     drawStrokes() {
-        // Draw strokes onto the offscreen strokes canvas in screen coordinates
         const sc = this.strokesCanvas;
         const sctx = this.strokesCtx;
         if (!sctx) return;
-        // Clear strokes canvas
         sctx.clearRect(0, 0, sc.width, sc.height);
 
         if (!this.freehandStrokes || this.freehandStrokes.length === 0) return;
         this.freehandStrokes.forEach(stroke => {
             if (!stroke.points || stroke.points.length === 0) return;
-            // Convert world points to screen coords
             const pts = stroke.points.map(p => ({ x: Math.round(p.x * this.camera.zoom + this.camera.x), y: Math.round(p.y * this.camera.zoom + this.camera.y) }));
             sctx.save();
+            
+            // Highlight selected strokes
+            if (this.selectedStrokes.includes(stroke)) {
+                 sctx.shadowColor = 'blue';
+                 sctx.shadowBlur = 5;
+            }
+
             if (stroke.tool === 'eraser') {
                 sctx.globalCompositeOperation = 'destination-out';
                 sctx.strokeStyle = 'rgba(0,0,0,1)';
@@ -1510,7 +1539,6 @@ class SupplyChainCanvas {
                 sctx.globalCompositeOperation = 'source-over';
                 sctx.strokeStyle = stroke.color || (this.themeColors && this.themeColors.text) || '#000000';
             }
-            // When drawing onto screen coordinate canvas, use stroke width as visual pixels
             sctx.lineWidth = (stroke.width || this.penThickness || 4);
             sctx.lineCap = 'round';
             sctx.lineJoin = 'round';
@@ -1573,6 +1601,8 @@ class SupplyChainCanvas {
             node.x = anchor.x + relX;
             node.y = anchor.y + relY;
         });
+        
+        // Note: Resizing strokes is complex, omitted for simplicity to prevent distortion
     }
 
     handleWheel(e) {
@@ -1610,7 +1640,6 @@ class SupplyChainCanvas {
         document.getElementById('zoomLevel').textContent = `${Math.round(this.camera.zoom * 100)}%`;
     }
 
-    // Theme handling: read CSS variables and apply to canvas rendering
     initTheme() {
         const saved = localStorage.getItem('scc-theme');
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1648,13 +1677,10 @@ class SupplyChainCanvas {
             arrow: read('--color-info') || '#626c71',
             canvasSurface: read('--color-surface') || '#ffffff'
         };
-        // Pen color default
         this.penColor = this.themeColors.text || '#000000';
-        // Ensure proper defaults for transparency tokens
         if (!this.copySettings.backgroundColor) this.copySettings.backgroundColor = this.themeColors.canvasSurface;
     }
 
-    // Read theme CSS variables for a specific scheme ('light' or 'dark') without permanently changing UI
     getThemeColorsForScheme(scheme = 'light') {
         const el = document.documentElement;
         const prev = el.getAttribute('data-color-scheme');
@@ -1682,12 +1708,8 @@ class SupplyChainCanvas {
         }
     }
 
-    /**
-     * Main function to generate a diagram from a natural language description.
-     */
     generateFromNL() {
         const input = document.getElementById('nlInput').value.trim();
-        if (window && window.console && window.console.debug) console.debug('generateFromNL -> input', input);
         if (!input) {
             this.showStatus('Please enter a description first!', 'warning');
             return;
@@ -1697,6 +1719,8 @@ class SupplyChainCanvas {
         this.nodes = [];
         this.connections = [];
         this.selectedNodes = [];
+        this.selectedStrokes = [];
+        this.freehandStrokes = [];
         this.connectingFrom = null;
         this.nodeCounter = 0;
 
@@ -1707,7 +1731,6 @@ class SupplyChainCanvas {
             return;
         }
 
-        // Check if the parser returned structured steps or simple tokens
         if (result[0].source && result[0].destination) {
             this.buildDiagramFromSteps(result);
         } else {
@@ -1719,10 +1742,6 @@ class SupplyChainCanvas {
         document.getElementById('nlInput').value = '';
     }
 
-    /**
-     * Builds a diagram from structured movement steps.
-     * @param {Array<Object>} steps - The structured steps from the NLP parser.
-     */
     buildDiagramFromSteps(steps) {
         let lastNode = null;
         let currentX = 150;
@@ -1750,10 +1769,6 @@ class SupplyChainCanvas {
         }
     }
 
-    /**
-     * Constructs the supply chain diagram step-by-step from simple parsed tokens.
-     * @param {Array<Object>} tokens - The sequence of parsed tokens from NLPParser.
-     */
     buildDiagramFromTokens(tokens) {
         let lastNodes = [];
         let lastNodeType = null;
@@ -1794,14 +1809,13 @@ class SupplyChainCanvas {
         }
     }
 
-
     createConnectionDirect(fromNode, toNode) {
         this.connections.push({ from: fromNode.id, to: toNode.id, label: '' });
     }
 
     showContextMenu(x, y) {
         const menu = document.getElementById('contextMenu');
-        const menuWidth = 200, menuHeight = 200; // Increased height for more items
+        const menuWidth = 200, menuHeight = 200;
         const vpWidth = window.innerWidth, vpHeight = window.innerHeight;
 
         menu.style.left = `${Math.min(x, vpWidth - menuWidth)}px`;
@@ -1815,18 +1829,17 @@ class SupplyChainCanvas {
         const pasteSelection = document.getElementById('pasteSelection');
         const deleteConnection = document.getElementById('deleteConnection');
 
-        // Show/hide items based on selection count
         if (this.selectedNodes.length > 1) {
             singleItems.forEach(item => item.style.display = 'none');
             multiItems.forEach(item => item.style.display = 'block');
-            if (copyForExcel) copyForExcel.style.display = 'block'; // Always show for multiple selection
+            if (copyForExcel) copyForExcel.style.display = 'block';
             if (copySelection) copySelection.style.display = 'block';
             if (deleteConnection) deleteConnection.style.display = 'none';
         } else if (this.selectedNodes.length === 1) {
             singleItems.forEach(item => item.style.display = 'block');
             multiItems.forEach(item => {
                 if (item.id === 'copyForExcel') {
-                    item.style.display = 'block'; // Show copy for single selection too
+                    item.style.display = 'block';
                 } else {
                     item.style.display = 'none';
                 }
@@ -1835,7 +1848,6 @@ class SupplyChainCanvas {
             if (copySelection) copySelection.style.display = 'block';
             if (deleteConnection) deleteConnection.style.display = 'none';
 
-            // Show/hide specific items based on node type
             const matItem = document.getElementById('addConnectedMaterial');
             const actItem = document.getElementById('addConnectedActivity');
             if (this.contextMenuNode) {
@@ -1843,25 +1855,20 @@ class SupplyChainCanvas {
                 actItem.style.display = this.contextMenuNode.type === 'material' ? 'block' : 'none';
             }
         } else {
-            // No selection
             singleItems.forEach(item => item.style.display = 'none');
             multiItems.forEach(item => item.style.display = 'none');
-            if (copyForExcel) copyForExcel.style.display = 'none'; // Hide other copy when nothing selected
+            if (copyForExcel) copyForExcel.style.display = 'none';
             if (copySelection) copySelection.style.display = 'none';
             if (deleteConnection) deleteConnection.style.display = 'none';
-            // Show paste if clipboard has items
             const clip = this.internalClipboard || this.stateManager.clipboard;
             if (pasteSelection) {
-                // Always show the Paste entry on blank canvas, but mark disabled when clipboard empty
                 pasteSelection.style.display = 'block';
                 if (clip && clip.nodes && clip.nodes.length > 0) pasteSelection.classList.remove('disabled');
                 else pasteSelection.classList.add('disabled');
             }
         }
 
-        // If a connection was right-clicked, show connection-specific items
         if (this.contextMenuConnection) {
-            // hide node-specific single-node items
             singleItems.forEach(item => item.style.display = 'none');
             multiItems.forEach(item => item.style.display = 'none');
             if (copySelection) copySelection.style.display = 'none';
@@ -1911,9 +1918,7 @@ class SupplyChainCanvas {
         if (this.editingNode) {
             const input = document.getElementById('editInput');
             const newContent = input.value.trim();
-            // Always apply (allow empty to become placeholder)
             const finalContent = newContent === '' ? 'Click to edit text' : newContent;
-            // Compute new dimensions for textbox nodes
             if (this.editingNode.type === 'textbox') {
                 const fontSize = this.editingNode.fontSize || 12;
                 const dims = this.computeTextBoxDimensions(finalContent, fontSize);
@@ -1931,13 +1936,11 @@ class SupplyChainCanvas {
                     this.queueRender();
                 }
             }
-            // Remove live handler if present
             if (this._editInputHandler) {
                 input.removeEventListener('input', this._editInputHandler);
                 this._editInputHandler = null;
             }
         }
-        // Handle editing a connection label
         else if (this.editingConnection) {
             const input = document.getElementById('editInput');
             const newContent = input.value.trim();
@@ -2011,7 +2014,6 @@ class SupplyChainCanvas {
         this.queueRender();
     }
 
-    // Copy selected nodes + internal connections to internal clipboard (for paste)
     copySelectionToClipboard() {
         if (this.selectedNodes.length === 0) {
             this.showStatus('Nothing selected to copy', 'warning');
@@ -2021,15 +2023,11 @@ class SupplyChainCanvas {
         const selectedIds = new Set(this.selectedNodes.map(n => n.id));
         const connsCopy = this.connections.filter(c => selectedIds.has(c.from) && selectedIds.has(c.to)).map(c => JSON.parse(JSON.stringify(c)));
         const clip = { nodes: nodesCopy, connections: connsCopy };
-        // Store in both stateManager (for persistence) and local property for immediate access
         this.stateManager.clipboard = clip;
         this.internalClipboard = clip;
-        // Debug info for developer troubleshooting
-        if (window && window.console) console.debug('copySelectionToClipboard -> stored', clip);
         this.showStatus(`Copied ${nodesCopy.length} element(s) to clipboard`, 'success');
     }
 
-    // Paste from internal clipboard, duplicating nodes and connections
     pasteFromClipboard() {
         const clip = this.internalClipboard || this.stateManager.clipboard;
         if (!clip || !clip.nodes || clip.nodes.length === 0) {
@@ -2037,11 +2035,9 @@ class SupplyChainCanvas {
             return;
         }
 
-        if (window && window.console) console.debug('pasteFromClipboard -> clipboard', clip);
         this.saveState();
         const idMap = {};
         const newNodes = [];
-        // Offset pasted nodes slightly so user can see duplication
         const offsetX = 20, offsetY = 20;
 
         clip.nodes.forEach(orig => {
@@ -2055,7 +2051,6 @@ class SupplyChainCanvas {
             newNodes.push(newNode);
         });
 
-        // Recreate internal connections among pasted nodes
         if (clip.connections && clip.connections.length > 0) {
             clip.connections.forEach(c => {
                 const fromNew = idMap[c.from];
@@ -2082,6 +2077,8 @@ class SupplyChainCanvas {
         this.nodes = [];
         this.connections = [];
         this.selectedNodes = [];
+        this.freehandStrokes = [];
+        this.selectedStrokes = [];
         this.nodeCounter = 0;
 
         this.sampleData.nodes.forEach(nodeData => {
@@ -2096,7 +2093,6 @@ class SupplyChainCanvas {
         });
 
         this.connections = [...this.sampleData.connections];
-        // Ensure any textboxes have computed sizes
         this.nodes.forEach(n => {
             if (n.type === 'textbox') {
                 n.fontSize = n.fontSize || 12;
@@ -2109,20 +2105,25 @@ class SupplyChainCanvas {
         this.showStatus('Sample supply chain loaded!', 'success');
     }
 
+    // Updated clear() to remove strokes
     clear() {
         this.saveState();
         this.nodes = [];
         this.connections = [];
         this.selectedNodes = [];
+        this.freehandStrokes = []; // FIX: Clear strokes
+        this.selectedStrokes = [];
         this.nodeCounter = 0;
         this.resetZoom();
         this.showStatus('Canvas cleared!', 'info');
     }
 
+    // Updated save() to include strokes
     save() {
         const data = { 
             nodes: this.nodes, 
             connections: this.connections, 
+            freehandStrokes: this.freehandStrokes, // FIX: Save strokes
             timestamp: new Date().toISOString(), 
             version: '4.0' 
         };
@@ -2136,6 +2137,7 @@ class SupplyChainCanvas {
         this.showStatus('Diagram saved!', 'success');
     }
 
+    // Updated load() to read strokes
     load() {
         document.getElementById('fileInput').click();
     }
@@ -2151,8 +2153,8 @@ class SupplyChainCanvas {
                 const data = JSON.parse(e.target.result);
                 this.nodes = data.nodes || [];
                 this.connections = data.connections || [];
+                this.freehandStrokes = data.freehandStrokes || []; // FIX: Load strokes
                 
-                // Fix: Calculate max ID instead of length to prevent ID collisions
                 let maxId = 0;
                 this.nodes.forEach(node => {
                     if (node.id && node.id.startsWith('node_')) {
@@ -2164,7 +2166,6 @@ class SupplyChainCanvas {
                 });
                 this.nodeCounter = maxId;
 
-                // Ensure textboxes have computed dimensions
                 this.nodes.forEach(n => {
                     if (n.type === 'textbox') {
                         n.fontSize = n.fontSize || 12;
@@ -2174,6 +2175,7 @@ class SupplyChainCanvas {
                     }
                 });
                 this.selectedNodes = [];
+                this.selectedStrokes = [];
                 this.resetZoom();
                 this.showStatus('Diagram loaded successfully!', 'success');
             } catch (error) {
@@ -2185,41 +2187,34 @@ class SupplyChainCanvas {
     }
 
     exportPNG() {
-        // Render the full canvas to an offscreen high-res canvas using the day/light theme
         const exportColors = this.getThemeColorsForScheme('light') || this.themeColors || {};
 
-        // Create offscreen canvas
-        const scaleFactor = 2; // export at higher resolution
+        const scaleFactor = 2;
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = Math.max(1, Math.floor(this.canvas.width * scaleFactor));
         tempCanvas.height = Math.max(1, Math.floor(this.canvas.height * scaleFactor));
         const tctx = tempCanvas.getContext('2d');
 
-        // High-res scaling
         tctx.scale(scaleFactor, scaleFactor);
 
-        // Fill background using export colors
         tctx.fillStyle = exportColors.canvasSurface || '#ffffff';
         tctx.fillRect(0, 0, tempCanvas.width / scaleFactor, tempCanvas.height / scaleFactor);
 
-        // Apply camera transform to match on-screen view
         tctx.translate(this.camera.x, this.camera.y);
         tctx.scale(this.camera.zoom, this.camera.zoom);
 
-        // Draw grid using export colors
         this.drawGridForExport(tctx, exportColors);
 
-        // Draw connections
         this.connections.forEach(conn => {
             const fromNode = this.nodes.find(n => n.id === conn.from);
             const toNode = this.nodes.find(n => n.id === conn.to);
             if (fromNode && toNode) this.drawConnectionForExport(tctx, fromNode, toNode, exportColors);
         });
 
-        // Draw nodes
         this.nodes.forEach(node => this.drawNodeForExport(tctx, node, exportColors));
 
-        // Trigger download
+        // Note: Freehand strokes are not currently included in PNG export (omitted for simplicity as per original code logic)
+        
         tempCanvas.toBlob(blob => {
             if (!blob) {
                 this.showStatus('Failed to export PNG', 'error');
@@ -2237,7 +2232,6 @@ class SupplyChainCanvas {
         }, 'image/png', 1.0);
     }
 
-    // Draw grid for export using explicit colors map
     drawGridForExport(ctx, colors = null) {
         const theme = colors || this.themeColors || {};
         ctx.save();
@@ -2280,7 +2274,6 @@ class SupplyChainCanvas {
         }, 4000);
     }
 
-    // Enhanced Copy for Excel Implementation
     getSelectionBounds() {
         if (this.selectedNodes.length === 0) return null;
         
@@ -2289,7 +2282,6 @@ class SupplyChainCanvas {
         
         this.selectedNodes.forEach(node => {
             if (node.type === 'textbox') {
-                // For textboxes, use their width and height
                 const halfWidth = node.width / 2;
                 const halfHeight = node.height / 2;
                 minX = Math.min(minX, node.x - halfWidth);
@@ -2297,14 +2289,12 @@ class SupplyChainCanvas {
                 maxX = Math.max(maxX, node.x + halfWidth);
                 maxY = Math.max(maxY, node.y + halfHeight);
             } else {
-                // For regular nodes (circles, triangles)
                 const radius = node.shape === 'circle' ? 25 : 32;
                 minX = Math.min(minX, node.x - radius);
                 minY = Math.min(minY, node.y - radius);
                 maxX = Math.max(maxX, node.x + radius);
                 maxY = Math.max(maxY, node.y + radius);
                 
-                // Include label area for regular nodes
                 const labelY = node.y + 40;
                 const labelHeight = 20;
                 minY = Math.min(minY, labelY - labelHeight / 2);
@@ -2326,41 +2316,32 @@ class SupplyChainCanvas {
             return;
         }
 
-        // Calculate bounds of selection
         const bounds = this.getSelectionBounds();
         if (!bounds) return;
 
-        // Hide context menu immediately so the user sees feedback
         this.hideContextMenu();
 
-        // Create a temporary canvas with padding
         const tempCanvas = document.createElement('canvas');
         const padding = this.copySettings.padding;
-        const scaleFactor = 2; // For high resolution output
+        const scaleFactor = 2;
         
         tempCanvas.width = (bounds.width + (padding * 2)) * scaleFactor;
         tempCanvas.height = (bounds.height + (padding * 2)) * scaleFactor;
         
         const tempCtx = tempCanvas.getContext('2d');
         
-        // Scale for high resolution
         tempCtx.scale(scaleFactor, scaleFactor);
         
-        // Use explicit light-theme colors for export so copied image matches day mode visuals
         const exportColors = this.getThemeColorsForScheme('light') || {};
-        // Set white/background (no transparency) according to light theme
         tempCtx.fillStyle = exportColors.canvasSurface || this.copySettings.backgroundColor;
         tempCtx.fillRect(0, 0, tempCanvas.width / scaleFactor, tempCanvas.height / scaleFactor);
         
-        // Set up transform for drawing (translate to center the selection with padding)
         tempCtx.translate(padding - bounds.x, padding - bounds.y);
         
-        // Draw connections first (so they appear under nodes)
         this.connections.forEach(conn => {
             const fromNode = this.nodes.find(n => n.id === conn.from);
             const toNode = this.nodes.find(n => n.id === conn.to);
             
-         // Only draw connections where both nodes are selected
             if (fromNode && toNode && 
                 this.selectedNodes.includes(fromNode) && 
                 this.selectedNodes.includes(toNode)) {
@@ -2368,18 +2349,15 @@ class SupplyChainCanvas {
             }
         });
         
-        // Draw nodes
         this.selectedNodes.forEach(node => {
             this.drawNodeForExport(tempCtx, node, exportColors);
         });
         
-        // Copy to clipboard
         tempCanvas.toBlob(blob => {
             try {
                 const item = new ClipboardItem({ 'image/png': blob });
                 navigator.clipboard.write([item]).then(() => {
                     this.showStatus(`Copied ${this.selectedNodes.length} element(s) to clipboard for Excel`, 'success');
-                    // ensure context menu hidden in case it was re-opened
                     this.hideContextMenu();
                 }).catch(err => {
                     console.error('Failed to copy to clipboard:', err);
@@ -2394,13 +2372,11 @@ class SupplyChainCanvas {
         }, 'image/png', 1.0);
     }
 
-    // Helper method to draw connections for export
     drawConnectionForExport(ctx, fromNode, toNode, conn, colors = null) {
         const headLength = 12;
         const angle = Math.atan2(toNode.y - fromNode.y, toNode.x - fromNode.x);
         const nodeRadius = 30;
         
-        // Calculate connection points
         const adjFromX = fromNode.x + nodeRadius * Math.cos(angle);
         const adjFromY = fromNode.y + nodeRadius * Math.sin(angle);
         const adjToX = toNode.x - nodeRadius * Math.cos(angle);
@@ -2413,13 +2389,11 @@ class SupplyChainCanvas {
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         
-        // Draw line
         ctx.beginPath();
         ctx.moveTo(adjFromX, adjFromY);
         ctx.lineTo(adjToX, adjToY);
         ctx.stroke();
         
-        // Draw arrowhead
         ctx.fillStyle = theme.arrow || (this.themeColors && this.themeColors.arrow) || '#626c71';
         ctx.beginPath();
         ctx.moveTo(adjToX, adjToY);
@@ -2434,7 +2408,6 @@ class SupplyChainCanvas {
         ctx.closePath();
         ctx.fill();
 
-        // --- NEW: Draw Label Text ---
         if (conn && conn.label) {
             const midX = (adjFromX + adjToX) / 2;
             const midY = (adjFromY + adjToY) / 2;
@@ -2448,12 +2421,10 @@ class SupplyChainCanvas {
             ctx.textBaseline = 'bottom';
             ctx.fillText(conn.label, 0, -8);
         }
-        // -----------------------------
         
         ctx.restore();
     }
 
-    // Helper method to draw nodes for export (accept explicit colors map)
     drawNodeForExport(ctx, node, colors = null) {
         ctx.save();
         const theme = colors || this.themeColors || {};
@@ -2467,25 +2438,20 @@ class SupplyChainCanvas {
         ctx.restore();
     }
 
-    // Helper method to draw textboxes for export (accept explicit colors map)
     drawTextBoxForExport(ctx, node, colors = null) {
         const theme = colors || this.themeColors || {};
-        // Draw textbox border
         ctx.strokeStyle = theme.text || (this.themeColors && this.themeColors.text) || '#000000';
         ctx.lineWidth = 2;
         ctx.fillStyle = theme.canvasSurface || (this.themeColors && this.themeColors.canvasSurface) || '#ffffff';
 
-        // Draw rectangle
         ctx.fillRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
         ctx.strokeRect(node.x - node.width / 2, node.y - node.height / 2, node.width, node.height);
 
-        // Draw text
         ctx.fillStyle = theme.text || (this.themeColors && this.themeColors.text) || '#000000';
         ctx.font = `${node.fontSize}px Arial, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Handle text wrapping
         const lines = this.wrapTextForExport(ctx, node.label, node.width - 10);
         const lineHeight = node.fontSize + 2;
         const startY = node.y - (lines.length - 1) * lineHeight / 2;
@@ -2495,10 +2461,8 @@ class SupplyChainCanvas {
         });
     }
 
-    // Helper method to draw regular nodes for export (accept explicit colors map)
     drawRegularNodeForExport(ctx, node, colors = null) {
         const theme = colors || this.themeColors || {};
-        // Set colors based on node type
         const isMaterial = node.type === 'material';
         const matFill = theme.nodeMaterialFill || (this.themeColors && this.themeColors.nodeMaterialFill) || '#1fb8cd';
         const actFill = theme.nodeActivityFill || (this.themeColors && this.themeColors.nodeActivityFill) || '#ffc185';
@@ -2508,7 +2472,6 @@ class SupplyChainCanvas {
         ctx.strokeStyle = isMaterial ? matStroke : actStroke;
         ctx.lineWidth = 2;
 
-        // Draw node shape
         ctx.beginPath();
         if (node.shape === 'triangle') {
             this.drawTriangleForExport(ctx, node.x, node.y, 32);
@@ -2518,13 +2481,11 @@ class SupplyChainCanvas {
         ctx.fill();
         ctx.stroke();
 
-        // Draw label
         ctx.fillStyle = theme.text || (this.themeColors && this.themeColors.text) || '#13343b';
         ctx.font = '12px Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
-        // Handle text wrapping for labels
         const lines = this.wrapTextForExport(ctx, node.label, 100);
         const lineHeight = 14;
         const startY = node.y + 40;
@@ -2534,7 +2495,6 @@ class SupplyChainCanvas {
         });
     }
 
-    // Helper method to draw triangles for export
     drawTriangleForExport(ctx, x, y, size) {
         const h = size * Math.sqrt(3) / 2;
         ctx.moveTo(x, y - h / 2);
@@ -2543,7 +2503,6 @@ class SupplyChainCanvas {
         ctx.closePath();
     }
 
-    // Helper method for text wrapping in export
     wrapTextForExport(ctx, text, maxWidth) {
         const words = text.split(' ');
         const lines = [];
@@ -2564,16 +2523,14 @@ class SupplyChainCanvas {
         return lines;
     }
 
-    // Compute width/height for a textbox given its text and font size.
     computeTextBoxDimensions(text, fontSize = 12, maxWidth = 420) {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         const font = `${fontSize}px -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
         ctx.font = font;
 
-        // Break into manual lines, then wrap each according to maxWidth
         const manualLines = text.split('\n');
-        const padding = 10; // internal padding left/right
+        const padding = 10;
         let measuredMax = 0;
         let totalLines = 0;
 
@@ -2588,10 +2545,6 @@ class SupplyChainCanvas {
         const finalHeight = Math.max(28, Math.ceil(totalLines * lineHeight + padding * 2));
 
         const result = { width: finalWidth, height: finalHeight, lineHeight, lines: totalLines };
-        // Small debug log to help verify resizing behavior in the browser console
-        if (window && window.console && window.console.debug) {
-            console.debug('computeTextBoxDimensions', { text, fontSize, result });
-        }
         return result;
     }
 }

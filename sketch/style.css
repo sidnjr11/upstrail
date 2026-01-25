@@ -1263,8 +1263,8 @@ select.form-control {
   border-right: 1px solid var(--color-border) !important;
 }
 
-[data-color-scheme="dark"] .sidebar .tool-btn {
-  background-color: var(--color-background) !important;
+[data-color-scheme="dark"] .sidebar .tool-btn .active{
+  background-color: var(--color-background) !important; 
   border-color: var(--color-border) !important;
   color: var(--color-text) !important;
 }

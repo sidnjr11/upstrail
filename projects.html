@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upstrail – Projects</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #3B82F6;
+      --accent-color: #F97316;
+      --background-color: #F3F4F6;
+      --text-color: #1F2937;
+      --footer-color: #6B7280;
+      --nav-bg: #FFFFFF;
+      --nav-height: 70px;
+      --card-bg: #FFFFFF;
+    }
+    
+    * { box-sizing: border-box; }
+
+    body { 
+      font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: var(--background-color); 
+      color: var(--text-color);
+      margin: 0; 
+      padding: 0; 
+      padding-top: var(--nav-height);
+      line-height: 1.6;
+    }
+
+    /* --- NAVIGATION BAR --- */
+    .navbar {
+      background-color: var(--nav-bg);
+      height: var(--nav-height);
+      border-bottom: 1px solid #E5E7EB;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+    }
+
+    .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 100%;
+      width: 100%;
+      max-width: 1280px;
+      padding: 0 24px;
+    }
+
+    .nav-logo a {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+      color: var(--text-color);
+      font-weight: 700;
+      font-size: 1.75rem;
+    }
+
+    .nav-logo img {
+      height: 35px;
+      margin-right: -3px;
+    }
+
+    .nav-menu {
+      display: flex;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      gap: 24px;
+    }
+
+    .nav-menu a {
+      color: #374151;
+      text-decoration: none;
+      padding: 8px 16px;
+      font-weight: 600;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+    
+    .nav-menu a:hover, .nav-menu a.active {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    /* --- PAGE CONTENT --- */
+    main {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px 24px;
+    }
+
+    header { 
+        text-align: center; 
+        margin-bottom: 60px;
+    }
+    
+    h1 { 
+        color: var(--primary-color); 
+        font-size: 2.5rem; 
+        font-weight: 700; 
+        margin-bottom: 16px;
+    }
+
+    .subtitle {
+        font-size: 1.2rem;
+        color: #4B5563;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .project-card {
+      background: var(--card-bg);
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border-top: 6px solid var(--accent-color);
+      margin-bottom: 40px;
+    }
+
+    .project-section {
+        margin-bottom: 32px;
+    }
+
+    .project-section:last-child {
+        margin-bottom: 0;
+    }
+
+    h2 {
+        color: var(--primary-color);
+        font-size: 1.5rem;
+        margin-bottom: 16px;
+        border-bottom: 2px solid #E5E7EB;
+        padding-bottom: 8px;
+    }
+
+    h3 {
+        font-size: 1.1rem;
+        color: #374151;
+        margin-top: 24px;
+        margin-bottom: 8px;
+    }
+
+    p, li {
+        color: #4B5563;
+        margin-bottom: 12px;
+    }
+
+    ul {
+        padding-left: 20px;
+    }
+
+    .tag {
+        display: inline-block;
+        background: #DBEAFE;
+        color: #1E40AF;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-right: 8px;
+        margin-bottom: 16px;
+    }
+
+    /* Diagram placeholder style */
+    .diagram-box {
+        background: #F9FAFB;
+        border: 1px dashed #9CA3AF;
+        border-radius: 8px;
+        padding: 24px;
+        text-align: center;
+        color: #6B7280;
+        margin: 20px 0;
+        font-family: monospace;
+    }
+
+    @media (max-width: 768px) {
+      .nav-menu { display: none; }
+    }
+  </style>
+  
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-MFN587504V"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-MFN587504V');
+  </script>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-container">
+    <div class="nav-logo">
+      <a href="index.html">
+        <img src="upstraillogo.png" alt="Upstrail Logo">
+        <span>Upstrail</span>
+      </a>
+    </div>
+    <ul class="nav-menu">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="downloads.html">Excel Tools</a></li>
+      <li><a href="sketch/index.html">Supply Chain Canvas</a></li>
+      <li><a href="projects.html" class="active">Projects</a></li>
+      <li><a href="about.html">About Us</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+  <header>
+    [cite_start]<h1>Project Clearmesh [cite: 67]</h1>
+    <p class="subtitle">Automated Data Ingestion & Semantic Mapping for Supply Chain Systems</p>
+  </header>
+
+  <div class="project-card">
+    <div style="margin-bottom: 24px;">
+        <span class="tag">Semantic Embedding</span>
+        <span class="tag">Python</span>
+        <span class="tag">OpenAI API</span>
+        <span class="tag">Automated Mapping</span>
+    </div>
+
+    <div class="project-section">
+        <h2>Objective</h2>
+        [cite_start]<p>The Clearmesh system is designed to automate the ingestion of "messy," unstructured client data files (CSV format) and map them to a canonical, structured schema (Advanced Planning and Scheduling system). [cite: 68]</p>
+        [cite_start]<p>It replaces brittle, rules-based mapping (like Regex) with <strong>Semantic Matching</strong>, allowing the system to map a column named <code>cust_id_x</code> to <code>Customer ID</code> simply because they behave similarly in vector space. [cite: 145, 146]</p>
+    </div>
+
+    <div class="project-section">
+        <h2>Core Mechanism</h2>
+        [cite_start]<p>The system utilizes <strong>Semantic Embedding</strong> (via OpenAI's text-embedding-3-small model) and <strong>Cosine Similarity</strong> to match incoming data against a known "Gold Standard" training dataset. [cite: 69]</p>
+    </div>
+
+    <div class="project-section">
+        <h2>System Architecture</h2>
+        [cite_start]<p>The workflow operates in two distinct phases: [cite: 70]</p>
+        
+        <h3>1. Preprocessing (Training Phase)</h3>
+        [cite_start]<p>This phase creates a knowledge base of embeddings for known file types (e.g., SAP Tables) and their expected columns. [cite: 78]</p>
+        <ul>
+            [cite_start]<li><strong>Data Ingestion:</strong> Reads raw training data and groups it by table type (e.g., extracting metadata like Expected Data Type and Description). [cite: 80, 81]</li>
+            [cite_start]<li><strong>Embedding Generation:</strong> Generates text summaries for file types and columns, then converts them into vector embeddings stored in CSVs. [cite: 85, 86]</li>
+        </ul>
+
+        <h3>2. Inference (Runtime Phase)</h3>
+        [cite_start]<p>This phase processes incoming files to identify their type and map their columns. [cite: 92]</p>
+        <ul>
+            [cite_start]<li><strong>File Type Detection:</strong> Generates a "fingerprint" of the incoming file (using header names and first-row data types) and performs a vector search to find the best matching file type (e.g., "Order File" vs "Material File"). [cite: 108, 109]</li>
+            [cite_start]<li><strong>Column Mapping:</strong> Once the file type is identified, the system generates descriptions for every column (including sample data and key constraints) and matches them to the canonical schema using Cosine Similarity. [cite: 120, 128]</li>
+        </ul>
+    </div>
+    
+    <div class="diagram-box">
+        [ Raw CSV ]  -->  [ Fingerprinting ]  -->  [ Vector Search ]  -->  [ Canonical Mapping ]
+    </div>
+  </div>
+
+  <footer style="text-align: center; color: var(--footer-color); font-size: 0.9rem; margin-top: 40px;">
+    &copy; 2025 Upstrail. A community-driven project.
+  </footer>
+</main>
+
+</body>
+</html>
